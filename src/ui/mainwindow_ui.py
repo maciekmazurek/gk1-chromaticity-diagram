@@ -19,6 +19,9 @@ from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QMainWindow,
     QMenuBar, QSizePolicy, QSpacerItem, QSpinBox,
     QStatusBar, QVBoxLayout, QWidget)
 
+from .chromacity_widget import ChromacityDiagramWidget
+from .spectral_widget import SpectralDistributionWidget
+
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
@@ -28,7 +31,7 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName(u"centralwidget")
         self.horizontalLayout_3 = QHBoxLayout(self.centralwidget)
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.spectralDistributionWidget = QWidget(self.centralwidget)
+        self.spectralDistributionWidget = SpectralDistributionWidget(self.centralwidget)
         self.spectralDistributionWidget.setObjectName(u"spectralDistributionWidget")
         self.verticalLayout = QVBoxLayout(self.spectralDistributionWidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
@@ -60,7 +63,7 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_3.addWidget(self.spectralDistributionWidget)
 
-        self.chromacityDiagramWidget = QWidget(self.centralwidget)
+        self.chromacityDiagramWidget = ChromacityDiagramWidget(self.centralwidget)
         self.chromacityDiagramWidget.setObjectName(u"chromacityDiagramWidget")
 
         self.horizontalLayout_3.addWidget(self.chromacityDiagramWidget)

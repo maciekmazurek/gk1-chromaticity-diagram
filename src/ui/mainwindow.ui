@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout_3">
     <item>
-     <widget class="QWidget" name="spectralDistributionWidget" native="true">
+     <widget class="SpectralDistributionWidget" name="spectralDistributionWidget" native="true">
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
         <widget class="QWidget" name="bezierPointsWidget" native="true">
@@ -64,7 +64,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QWidget" name="chromacityDiagramWidget" native="true"/>
+     <widget class="ChromacityDiagramWidget" name="chromacityDiagramWidget" native="true"/>
     </item>
    </layout>
   </widget>
@@ -80,6 +80,20 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ChromacityDiagramWidget</class>
+   <extends>QWidget</extends>
+   <header>chromacitydiagramwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SpectralDistributionWidget</class>
+   <extends>QWidget</extends>
+   <header>spectraldistributionwidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
