@@ -2,6 +2,7 @@ from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QWidget
 
+from ..numerics import eval_bezier_curve
 
 class SpectralDistributionWidget(QWidget):
     def __init__(self, parent=None):
@@ -46,7 +47,7 @@ class SpectralDistributionWidget(QWidget):
         painter.drawLine(0, 0, x_axis_length, 0)
         painter.drawLine(0, 0, 0, y_axis_length)
 
-    def scale_to_coord(self, point: tuple[float, float]) -> QPointF:
+    def scale_to_widget(self, point: tuple[float, float]) -> QPointF:
         x_axis_length, y_axis_length = self.calc_axis_lengths()
         scaled_x = point[0] * x_axis_length
         scaled_y = point[1] * y_axis_length
@@ -59,24 +60,25 @@ class SpectralDistributionWidget(QWidget):
         return (scaled_x, scaled_y)
 
     def draw_bezier_curve(self, painter: QPainter):
-        cp0, cp1, cp2, cp3 = [
-            self.scale_to_coord(cp) for cp in self.bezier_control_points
-        ]
-        path = QPainterPath()
-        path.moveTo(cp0)
-        path.cubicTo(cp1, cp2, cp3)
+        samples = 200
+        curve_points = eval_bezier_curve(self.bezier_control_points, samples)
 
-        # Curve
+        # Drawing the curve
+        path = QPainterPath()
+        first_point = self.scale_to_widget(curve_points[0])
+        path.moveTo(first_point)
+        for point in curve_points[1:]:
+            path.lineTo(self.scale_to_widget(point))
         painter.drawPath(path)
 
-        # Control points
+        # Drawing control points
         painter.setBrush(QColor(255, 200, 255))
         painter.setPen(QPen(QColor(255, 200, 255), 2))
-        for p in (cp0, cp1, cp2, cp3):
-            painter.drawEllipse(p, 3, 3)
+        for p in self.bezier_control_points:
+            painter.drawEllipse(self.scale_to_widget(p), 3, 3)
 
     def transform_to_coord(self, point: QPointF) -> QPointF:
-        """Przekształca punkt z układu współrzędnych widgetu do układu 
+        """Przekształca punkt z układu współrzędnych widgetu do układu
         współrzędnych rysowania uwzględniając margines i odwrócenie osi Y."""
         x = point.x() - self.margin
         y = (self.height() - self.margin) - point.y()
@@ -87,7 +89,7 @@ class SpectralDistributionWidget(QWidget):
             return
         mouse_pos = self.transform_to_coord(event.position())
         coord_control_points = [
-            self.scale_to_coord(cp) for cp in self.bezier_control_points
+            self.scale_to_widget(cp) for cp in self.bezier_control_points
         ]
         index = None
         for i, cp in enumerate(coord_control_points):
@@ -109,7 +111,7 @@ class SpectralDistributionWidget(QWidget):
         # punktami kontrolnymi poza obszar układu
         x = max(0.0, min(1.0, x))
         y = max(0.0, min(1.0, y))
-        
+
         # Końcowe punkty kontrolne poruszamy tylko po osi X (y = 0)
         if self._dragging_index in (0, len(self.bezier_control_points) - 1):
             y = 0.0
