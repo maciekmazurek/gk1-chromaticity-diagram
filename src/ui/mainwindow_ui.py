@@ -50,6 +50,8 @@ class Ui_MainWindow(object):
 
         self.spinBox = QSpinBox(self.bezierPointsWidget)
         self.spinBox.setObjectName(u"spinBox")
+        self.spinBox.setMinimum(3)
+        self.spinBox.setValue(4)
 
         self.horizontalLayout_4.addWidget(self.spinBox)
 
