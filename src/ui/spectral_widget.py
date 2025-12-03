@@ -2,7 +2,7 @@ from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QWidget
 
-from ..numerics import eval_bezier_curve
+from numerics.bezier import eval_bezier_curve
 
 class SpectralDistributionWidget(QWidget):
     def __init__(self, parent=None):
@@ -60,7 +60,7 @@ class SpectralDistributionWidget(QWidget):
         return (scaled_x, scaled_y)
 
     def draw_bezier_curve(self, painter: QPainter):
-        samples = 200
+        samples = 100
         curve_points = eval_bezier_curve(self.bezier_control_points, samples)
 
         # Drawing the curve
