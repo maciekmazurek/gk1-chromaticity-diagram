@@ -15,9 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QMainWindow,
-    QMenuBar, QSizePolicy, QSpacerItem, QSpinBox,
-    QStatusBar, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QMainWindow, QMenuBar,
+    QSizePolicy, QStatusBar, QWidget)
 
 from .chromacity_widget import ChromacityDiagramWidget
 from .spectral_widget import SpectralDistributionWidget
@@ -33,35 +32,11 @@ class Ui_MainWindow(object):
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.spectralDistributionWidget = SpectralDistributionWidget(self.centralwidget)
         self.spectralDistributionWidget.setObjectName(u"spectralDistributionWidget")
-        self.verticalLayout = QVBoxLayout(self.spectralDistributionWidget)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.bezierPointsWidget = QWidget(self.spectralDistributionWidget)
-        self.bezierPointsWidget.setObjectName(u"bezierPointsWidget")
-        self.horizontalLayout_4 = QHBoxLayout(self.bezierPointsWidget)
-        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout_4.addItem(self.horizontalSpacer)
-
-        self.label = QLabel(self.bezierPointsWidget)
-        self.label.setObjectName(u"label")
-
-        self.horizontalLayout_4.addWidget(self.label)
-
-        self.spinBox = QSpinBox(self.bezierPointsWidget)
-        self.spinBox.setObjectName(u"spinBox")
-        self.spinBox.setMinimum(3)
-        self.spinBox.setValue(4)
-
-        self.horizontalLayout_4.addWidget(self.spinBox)
-
-
-        self.verticalLayout.addWidget(self.bezierPointsWidget)
-
-        self.verticalSpacer = QSpacerItem(20, 469, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.verticalLayout.addItem(self.verticalSpacer)
-
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.spectralDistributionWidget.sizePolicy().hasHeightForWidth())
+        self.spectralDistributionWidget.setSizePolicy(sizePolicy)
 
         self.horizontalLayout_3.addWidget(self.spectralDistributionWidget)
 
@@ -86,6 +61,5 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"gk1-chromacity-diagram", None))
-        self.label.setText(QCoreApplication.translate("MainWindow", u"Number of points:", None))
     # retranslateUi
 

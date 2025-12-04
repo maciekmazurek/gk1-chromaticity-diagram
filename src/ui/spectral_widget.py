@@ -1,8 +1,9 @@
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QMenu, QWidget
 
 from numerics.bezier import eval_bezier_curve
+
 
 class SpectralDistributionWidget(QWidget):
     def __init__(self, parent=None):
@@ -36,7 +37,7 @@ class SpectralDistributionWidget(QWidget):
         painter.translate(self.margin, self.height() - self.margin)
         painter.scale(1, -1)
 
-    def calc_axis_lengths(self):
+    def calc_axis_lengths(self) -> tuple[int, int]:
         x_axis_length = self.width() - 2 * self.margin
         y_axis_length = self.height() - 2 * self.margin
         return x_axis_length, y_axis_length
@@ -49,21 +50,30 @@ class SpectralDistributionWidget(QWidget):
 
     def scale_to_widget(self, point: tuple[float, float]) -> QPointF:
         x_axis_length, y_axis_length = self.calc_axis_lengths()
-        scaled_x = point[0] * x_axis_length
-        scaled_y = point[1] * y_axis_length
-        return QPointF(scaled_x, scaled_y)
+        x = point[0] * x_axis_length
+        y = point[1] * y_axis_length
+        return QPointF(x, y)
 
     def scale_to_norm(self, point: QPointF) -> tuple[float, float]:
         x_axis_length, y_axis_length = self.calc_axis_lengths()
-        scaled_x = point.x() / x_axis_length
-        scaled_y = point.y() / y_axis_length
-        return (scaled_x, scaled_y)
+        # Skalujemy wartości, a następnie clamp-ujemy do znormalizowanego
+        # przedziału [0,1], tak aby punkty nie wychodziły poza rysowany
+        # układ współrzędnych
+        x = max(0.0, min(1.0, point.x() / x_axis_length))
+        y = max(0.0, min(1.0, point.y() / y_axis_length))
+        return (x, y)
 
     def draw_bezier_curve(self, painter: QPainter):
         samples = 100
         curve_points = eval_bezier_curve(self.bezier_control_points, samples)
 
+        # Drawing the control polygon
+        painter.setPen(QPen(QColor(122, 130, 122), 1))
+        for p1, p2 in zip(self.bezier_control_points, self.bezier_control_points[1:]):
+            painter.drawLine(self.scale_to_widget(p1), self.scale_to_widget(p2))
+
         # Drawing the curve
+        painter.setPen(QPen(QColor(0, 0, 0), 2))
         path = QPainterPath()
         first_point = self.scale_to_widget(curve_points[0])
         path.moveTo(first_point)
@@ -84,33 +94,33 @@ class SpectralDistributionWidget(QWidget):
         y = (self.height() - self.margin) - point.y()
         return QPointF(x, y)
 
-    def mousePressEvent(self, event):
-        if event.button() != Qt.LeftButton:
-            return
-        mouse_pos = self.transform_to_coord(event.position())
-        coord_control_points = [
+    def control_point_hit_test(self, mouse_pos: QPointF) -> int | None:
+        """Sprawdza czy kursor myszy wchodzi w interakcję z punktem kontrolnym.
+        Jeżeli tak zwraca jego indeks, jeżeli nie zwraca None"""
+        index = None
+        widget_control_points = [
             self.scale_to_widget(cp) for cp in self.bezier_control_points
         ]
-        index = None
-        for i, cp in enumerate(coord_control_points):
+        for i, cp in enumerate(widget_control_points):
             if (
                 abs(cp.x() - mouse_pos.x()) <= self._hit_radius_px
                 and abs(cp.y() - mouse_pos.y()) <= self._hit_radius_px
             ):
                 index = i
                 break
-        self._dragging_index = index
+        return index
+
+    def mousePressEvent(self, event):
+        if event.button() != Qt.LeftButton:
+            return
+        mouse_pos = self.transform_to_coord(event.position())
+        self._dragging_index = self.control_point_hit_test(mouse_pos)
 
     def mouseMoveEvent(self, event):
         if self._dragging_index is None:
             return
         mouse_pos = self.transform_to_coord(event.position())
         x, y = self.scale_to_norm(mouse_pos)
-
-        # Clamp do obszaru układu współrzędnych, aby nie można było poruszać
-        # punktami kontrolnymi poza obszar układu
-        x = max(0.0, min(1.0, x))
-        y = max(0.0, min(1.0, y))
 
         # Końcowe punkty kontrolne poruszamy tylko po osi X (y = 0)
         if self._dragging_index in (0, len(self.bezier_control_points) - 1):
@@ -122,3 +132,43 @@ class SpectralDistributionWidget(QWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self._dragging_index = None
+
+    def contextMenuEvent(self, event):
+        mouse_pos = self.transform_to_coord(event.pos())
+        x_axis_length, y_axis_length = self.calc_axis_lengths()
+
+        # Only allow adding when click is inside the axes rectangle
+        if not (
+            0 <= mouse_pos.x() <= x_axis_length and 0 <= mouse_pos.y() <= y_axis_length
+        ):
+            return
+
+        menu = QMenu(self)
+        add_cp_action = None
+        del_cp_action = None
+        cp_idx = self.control_point_hit_test(mouse_pos)
+        control_point_hit = True if cp_idx is not None else False
+        if control_point_hit:
+            del_cp_action = menu.addAction("Delete control point")
+        else:
+            add_cp_action = menu.addAction("Add control point")
+        chosen = menu.exec(event.globalPos())
+        # Only act when a real action was selected (not None)
+        if chosen is not None and add_cp_action is not None and chosen is add_cp_action:
+            x, y = self.scale_to_norm(mouse_pos)
+            # Insert point keeping list ordered by x
+            cps = list(self.bezier_control_points)
+            insert_idx = 1
+            while insert_idx < len(cps) - 1 and cps[insert_idx][0] <= x:
+                insert_idx += 1
+            cps.insert(insert_idx, (x, y))
+            self.bezier_control_points = cps
+        elif (
+            chosen is not None
+            and del_cp_action is not None
+            and chosen is del_cp_action
+            and cp_idx is not None
+        ):
+            del self.bezier_control_points[cp_idx]
+
+        self.update()
