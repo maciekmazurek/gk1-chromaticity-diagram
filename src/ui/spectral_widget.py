@@ -1,5 +1,7 @@
+from turtle import back
+from typing import final
 from PySide6.QtCore import QPointF, Qt
-from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
+from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import QMenu, QWidget
 
 from numerics.bezier import eval_bezier_curve
@@ -9,28 +11,42 @@ from utils import load_color_matching_funcs
 class SpectralDistributionWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.bezier_control_points = [(0.2, 0), (0.4, 0.4), (0.7, 0.5), (0.9, 0)]
-        self.min_wavelength = 380
-        self.max_wavelength = 780
-        self.max_coefficient = 1.8
+        self.bezier_control_points = [(0.2, 0), (0.4, 0.4), (0.7, 0.4), (0.9, 0)]
         self.margin = 40
 
         self._dragging_index = None
         self._hit_radius_px = 8
         self.setMouseTracking(True)
 
+        self.background: QPixmap = None
+
     def paintEvent(self, event):
         painter = QPainter(self)
         try:
             self.setup_painter(painter)
-            self.draw_coord_system(painter)
-            self.draw_color_matching_funcs(painter)
+            if self.background is None:
+                self.draw_background()
+            else:
+                painter.drawPixmap(0, 0, self.background)
+            self.setup_coord_system_origin(painter)
             self.draw_bezier_curve(painter)
         finally:
             painter.end()
 
     def setup_painter(self, painter: QPainter):
         painter.setRenderHint(QPainter.Antialiasing)
+
+    def draw_background(self):
+        background = QPixmap(self.width(), self.height())
+        background.fill(Qt.transparent)
+        painter = QPainter(background)
+        try:
+            self.setup_painter(painter)
+            self.draw_coord_system(painter)
+            self.draw_color_matching_funcs(painter)
+        finally:
+            painter.end()
+        self.background = background
 
     def setup_coord_system_origin(self, painter: QPainter):
         painter.translate(self.margin, self.height() - self.margin)
@@ -63,8 +79,12 @@ class SpectralDistributionWidget(QWidget):
         return (x, y)
 
     def draw_color_matching_funcs(self, painter: QPainter):
-        wavelengths, XYZ = load_color_matching_funcs()
         opacity = 50
+        wavelengths, XYZ = load_color_matching_funcs()
+        # We normalize values to [0, 1] x [0, 1]
+        wavelengths -= wavelengths[0]
+        wavelengths /= wavelengths[-1]
+        XYZ /= XYZ.max()
 
         for i in range(3):
             path = QPainterPath()
@@ -124,6 +144,10 @@ class SpectralDistributionWidget(QWidget):
                 index = i
                 break
         return index
+    
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.draw_background()
 
     def mousePressEvent(self, event):
         if event.button() != Qt.LeftButton:

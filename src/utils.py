@@ -19,9 +19,5 @@ def load_color_matching_funcs() -> np.ndarray:
 
     wavelenghts = np.loadtxt(file_path, usecols=0, dtype=float)
     XYZ = np.loadtxt(file_path, usecols=(1, 2, 3), dtype=float)
-    # We normalize values to [0, 1] x [0, 1]
-    wavelenghts -= wavelenghts[0]
-    wavelenghts /= wavelenghts[-1]
-    XYZ /= XYZ.max()
 
     return (wavelenghts, XYZ)
