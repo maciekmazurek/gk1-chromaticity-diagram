@@ -3,6 +3,7 @@ from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QMenu, QWidget
 
 from numerics.bezier import eval_bezier_curve
+from utils import load_color_matching_funcs
 
 
 class SpectralDistributionWidget(QWidget):
@@ -23,15 +24,13 @@ class SpectralDistributionWidget(QWidget):
         try:
             self.setup_painter(painter)
             self.draw_coord_system(painter)
+            self.draw_color_matching_funcs(painter)
             self.draw_bezier_curve(painter)
         finally:
             painter.end()
 
     def setup_painter(self, painter: QPainter):
         painter.setRenderHint(QPainter.Antialiasing)
-        pen = QPen()
-        pen.setWidth(2)
-        painter.setPen(pen)
 
     def setup_coord_system_origin(self, painter: QPainter):
         painter.translate(self.margin, self.height() - self.margin)
@@ -62,6 +61,22 @@ class SpectralDistributionWidget(QWidget):
         x = max(0.0, min(1.0, point.x() / x_axis_length))
         y = max(0.0, min(1.0, point.y() / y_axis_length))
         return (x, y)
+
+    def draw_color_matching_funcs(self, painter: QPainter):
+        wavelengths, XYZ = load_color_matching_funcs()
+        opacity = 50
+
+        for i in range(3):
+            path = QPainterPath()
+            rgba_value = [0, 0, 0, opacity]
+            rgba_value[i] = 255
+            painter.setPen(QPen(QColor(*rgba_value), 2))
+            func_values = XYZ[:, i]
+            first_point = self.scale_to_widget((wavelengths[0], func_values[0]))
+            path.moveTo(first_point)
+            for wl, fv in zip(wavelengths[1:], func_values[1:]):
+                path.lineTo(self.scale_to_widget((wl, fv)))
+            painter.drawPath(path)
 
     def draw_bezier_curve(self, painter: QPainter):
         samples = 100
@@ -153,7 +168,6 @@ class SpectralDistributionWidget(QWidget):
         else:
             add_cp_action = menu.addAction("Add control point")
         chosen = menu.exec(event.globalPos())
-        # Only act when a real action was selected (not None)
         if chosen is not None and add_cp_action is not None and chosen is add_cp_action:
             x, y = self.scale_to_norm(mouse_pos)
             # Insert point keeping list ordered by x
