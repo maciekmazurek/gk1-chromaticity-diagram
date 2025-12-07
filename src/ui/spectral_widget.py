@@ -1,8 +1,8 @@
-from turtle import back
-from typing import final
+import numpy as np
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import QMenu, QWidget
+from scipy.interpolate import CubicSpline, interp1d
 
 from numerics.bezier import eval_bezier_curve
 from utils import load_color_matching_funcs
@@ -13,6 +13,19 @@ class SpectralDistributionWidget(QWidget):
         super().__init__(parent)
         self.bezier_control_points = [(0.2, 0), (0.4, 0.4), (0.7, 0.4), (0.9, 0)]
         self.margin = 40
+
+        # Physical data (for integration)
+        self.wavelengths_nm, self.color_matching_funcs_vals = (
+            load_color_matching_funcs()
+        )
+
+        # Normalized data (for drawing)
+        self.norm_wavelengths = self.wavelengths_nm.copy()
+        self.norm_wavelengths -= self.norm_wavelengths[0]
+        self.norm_wavelengths /= self.norm_wavelengths[-1]
+        self.norm_color_matching_funcs_vals = (
+            self.color_matching_funcs_vals / self.color_matching_funcs_vals.max()
+        )
 
         self._dragging_index = None
         self._hit_radius_px = 8
@@ -30,6 +43,7 @@ class SpectralDistributionWidget(QWidget):
                 painter.drawPixmap(0, 0, self.background)
             self.setup_coord_system_origin(painter)
             self.draw_bezier_curve(painter)
+            self.calc_XYZ()
         finally:
             painter.end()
 
@@ -80,21 +94,17 @@ class SpectralDistributionWidget(QWidget):
 
     def draw_color_matching_funcs(self, painter: QPainter):
         opacity = 50
-        wavelengths, XYZ = load_color_matching_funcs()
-        # We normalize values to [0, 1] x [0, 1]
-        wavelengths -= wavelengths[0]
-        wavelengths /= wavelengths[-1]
-        XYZ /= XYZ.max()
-
         for i in range(3):
             path = QPainterPath()
             rgba_value = [0, 0, 0, opacity]
             rgba_value[i] = 255
             painter.setPen(QPen(QColor(*rgba_value), 2))
-            func_values = XYZ[:, i]
-            first_point = self.scale_to_widget((wavelengths[0], func_values[0]))
+            norm_func_values = self.norm_color_matching_funcs_vals[:, i]
+            first_point = self.scale_to_widget(
+                (self.norm_wavelengths[0], norm_func_values[0])
+            )
             path.moveTo(first_point)
-            for wl, fv in zip(wavelengths[1:], func_values[1:]):
+            for wl, fv in zip(self.norm_wavelengths[1:], norm_func_values[1:]):
                 path.lineTo(self.scale_to_widget((wl, fv)))
             painter.drawPath(path)
 
@@ -124,7 +134,7 @@ class SpectralDistributionWidget(QWidget):
 
     def transform_to_coord(self, point: QPointF) -> QPointF:
         """Przekształca punkt z układu współrzędnych widgetu do układu
-        współrzędnych rysowania uwzględniając margines i odwrócenie osi Y."""
+        współrzędnych rysowania uwzględniając margines i odwrócenie osi Y"""
         x = point.x() - self.margin
         y = (self.height() - self.margin) - point.y()
         return QPointF(x, y)
@@ -144,7 +154,7 @@ class SpectralDistributionWidget(QWidget):
                 index = i
                 break
         return index
-    
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.draw_background()
@@ -207,6 +217,45 @@ class SpectralDistributionWidget(QWidget):
             and chosen is del_cp_action
             and cp_idx is not None
         ):
-            del self.bezier_control_points[cp_idx]
+            n = len(self.bezier_control_points)
+            if n > 2 and cp_idx not in (0, n - 1):
+                del self.bezier_control_points[cp_idx]
 
         self.update()
+
+    def calc_spectral_func(self):
+        # Liczymy funkcję widmową poprzez interpolację beziera
+        samples = 200
+        curve_points = eval_bezier_curve(self.bezier_control_points, samples)
+        x = np.array([p[0] for p in curve_points], dtype=float)
+        y = np.array([p[1] for p in curve_points], dtype=float)
+        # Skalujemy do [380, 780] x [0, ~1.8]
+        x *= 400
+        x += 380
+        y *= self.color_matching_funcs_vals.max()
+        # Dla wartości x z poza zakresu zwracamy 0
+        S_func = interp1d(x, y, kind="cubic", bounds_error=False, fill_value=0)
+        return S_func
+
+    def calc_xyz_funcs(self):
+        cm_funcs = []
+        x = self.wavelengths_nm
+        for i in range(3):
+            y = self.color_matching_funcs_vals[:, i]
+            cm_funcs.append(
+                interp1d(x, y, kind="cubic", bounds_error=False, fill_value=0)
+            )
+        return cm_funcs
+
+    def calc_XYZ(self):
+        XYZ = []
+        cm_funcs = self.calc_xyz_funcs()
+        S_func = self.calc_spectral_func()
+        x = S_func.x
+        for cm_func in cm_funcs:
+            y_product = cm_func(x) * S_func(x)
+            integral = CubicSpline(x, y_product).integrate(x[0], x[-1])
+            XYZ.append(integral)
+
+        print(f"({XYZ[0]}, {XYZ[1]}, {XYZ[2]})")
+        return tuple(XYZ)

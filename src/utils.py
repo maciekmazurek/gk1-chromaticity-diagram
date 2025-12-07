@@ -3,13 +3,14 @@ from pathlib import Path
 import numpy as np
 
 
-def load_color_matching_funcs() -> np.ndarray:
+def load_color_matching_funcs() -> tuple[np.ndarray, np.ndarray]:
     """Load CIE color matching functions values.
 
     Returns
     -------
-    np.ndarray
-        Array of shape (N, 3) with XYZ-like values.
+    tuple[np.ndarray, np.ndarray]
+        Tuple (wavelengths_nm, XYZ) where wavelengths are in nm and
+        XYZ has shape (N, 3).
     """
     project_dir = Path(__file__).resolve().parent.parent
     file_path = project_dir / "resources" / "color_matching_functions.txt"
