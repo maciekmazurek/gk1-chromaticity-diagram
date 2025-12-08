@@ -9,8 +9,8 @@ def load_color_matching_funcs() -> tuple[np.ndarray, np.ndarray]:
     Returns
     -------
     tuple[np.ndarray, np.ndarray]
-        Tuple (wavelengths_nm, XYZ) where wavelengths are in nm and
-        XYZ has shape (N, 3).
+        Tuple (wavelengths_nm, xyz) where wavelengths are in nm and
+        xyz has shape (N, 3).
     """
     project_dir = Path(__file__).resolve().parent.parent
     file_path = project_dir / "resources" / "color_matching_functions.txt"
@@ -19,6 +19,6 @@ def load_color_matching_funcs() -> tuple[np.ndarray, np.ndarray]:
         raise FileNotFoundError(f"Data file not found: {file_path}")
 
     wavelenghts = np.loadtxt(file_path, usecols=0, dtype=float)
-    XYZ = np.loadtxt(file_path, usecols=(1, 2, 3), dtype=float)
+    xyz = np.loadtxt(file_path, usecols=(1, 2, 3), dtype=float)
 
-    return (wavelenghts, XYZ)
+    return (wavelenghts, xyz)
