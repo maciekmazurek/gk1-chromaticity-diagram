@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>1500</width>
     <height>600</height>
    </rect>
   </property>
@@ -26,7 +26,14 @@
      </widget>
     </item>
     <item>
-     <widget class="ChromacityDiagramWidget" name="chromacityDiagramWidget" native="true"/>
+     <widget class="ChromacityDiagramWidget" name="chromacityDiagramWidget" native="true">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -35,8 +42,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
-     <height>21</height>
+     <width>1500</width>
+     <height>17</height>
     </rect>
    </property>
   </widget>
