@@ -1,4 +1,4 @@
-from typing import final
+from multiprocessing.sharedctypes import Synchronized
 from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QPixmap, Qt
 from PySide6.QtWidgets import QWidget
 
@@ -30,13 +30,19 @@ class ChromacityDiagramWidget(QWidget):
         self.coord_origin_y = int(coord_origin_y_original * scale_factor)
         self.coord_scale = coord_scale_original * scale_factor
 
+        self.XYZ = [0.0, 0.0, 0.0]
+
+    def set_XYZ(self, XYZ: list[float]):
+        self.XYZ = XYZ
+        self.update()
+
     def paintEvent(self, event):
         painter = QPainter(self)
         try:
             painter.setRenderHint(QPainter.Antialiasing)
             painter.drawPixmap(0, self.fitted_offset_y, self.diagram_image)
             self.setup_coord_system_origin(painter)
-            self.draw_chromacity_point(painter, x=0.3, y=0.3)
+            self.draw_chromacity_point(painter)
         finally:
             painter.end()
 
@@ -46,7 +52,15 @@ class ChromacityDiagramWidget(QWidget):
         )
         painter.scale(1, -1)
 
-    def draw_chromacity_point(self, painter: QPainter, x: float, y: float):
+    def calc_xyz_values(self) -> tuple[float]:
+        XYZ_sum = sum(self.XYZ)
+        x = self.XYZ[0] / XYZ_sum
+        y = self.XYZ[1] / XYZ_sum
+        z = self.XYZ[2] / XYZ_sum
+        return (x, y, z)
+
+    def draw_chromacity_point(self, painter: QPainter):
+        x, y, _ = self.calc_xyz_values()
         painter.setPen(QPen(QColor(0, 0, 0), 2))
         painter.setBrush(QBrush(QColor(255, 255, 255)))
         radius_px = 4

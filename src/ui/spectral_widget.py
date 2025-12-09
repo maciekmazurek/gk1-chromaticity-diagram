@@ -1,5 +1,5 @@
 import numpy as np
-from PySide6.QtCore import QPointF, Qt
+from PySide6.QtCore import QPointF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import QMenu, QWidget
 from scipy.interpolate import CubicSpline, interp1d
@@ -9,6 +9,8 @@ from utils import load_color_matching_funcs
 
 
 class SpectralDistributionWidget(QWidget):
+    xyzChanged = Signal(list)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.bezier_control_points = [(0.2, 0), (0.4, 0.4), (0.7, 0.4), (0.9, 0)]
@@ -81,7 +83,7 @@ class SpectralDistributionWidget(QWidget):
         x = max(0.0, min(1.0, point.x() / x_axis_length))
         y = max(0.0, min(1.0, point.y() / y_axis_length))
         return (x, y)
-    
+
     def scale_spectral_to_norm(self, x: np.ndarray, y: np.ndarray):
         norm_x = x.copy()
         norm_x -= norm_x.min()
@@ -92,7 +94,7 @@ class SpectralDistributionWidget(QWidget):
         norm_y /= norm_y.max()
 
         return (norm_x, norm_y)
-    
+
     def scale_norm_to_spectral(self, norm_x: np.ndarray, norm_y: np.ndarray):
         x = norm_x.copy()
         x *= self.wavelengths.max() - self.wavelengths.min()
@@ -105,7 +107,9 @@ class SpectralDistributionWidget(QWidget):
         return (x, y)
 
     def draw_color_matching_funcs(self, painter: QPainter):
-        norm_wavelengths, norm_xyz_values = self.scale_spectral_to_norm(self.wavelengths, self.xyz_values)
+        norm_wavelengths, norm_xyz_values = self.scale_spectral_to_norm(
+            self.wavelengths, self.xyz_values
+        )
         opacity = 50
         for i in range(3):
             path = QPainterPath()
@@ -128,7 +132,9 @@ class SpectralDistributionWidget(QWidget):
         # Drawing the control polygon
         painter.setPen(QPen(QColor(122, 130, 122), 1))
         for p1, p2 in zip(self.bezier_control_points, self.bezier_control_points[1:]):
-            painter.drawLine(self.scale_norm_to_widget(p1), self.scale_norm_to_widget(p2))
+            painter.drawLine(
+                self.scale_norm_to_widget(p1), self.scale_norm_to_widget(p2)
+            )
 
         # Drawing the curve
         painter.setPen(QPen(QColor(0, 0, 0), 2))
@@ -258,7 +264,7 @@ class SpectralDistributionWidget(QWidget):
             )
         return xyz_funcs
 
-    def calc_XYZ(self) -> tuple[float]:
+    def calc_XYZ(self):
         XYZ = []
         S_func = self.calc_spectral_func()
         x = S_func.x
@@ -267,5 +273,4 @@ class SpectralDistributionWidget(QWidget):
             integral = CubicSpline(x, y_product).integrate(x[0], x[-1])
             XYZ.append(integral)
 
-        print(f"({XYZ[0]}, {XYZ[1]}, {XYZ[2]})")
-        return tuple(XYZ)
+        self.xyzChanged.emit(XYZ)
