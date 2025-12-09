@@ -12,7 +12,7 @@ class SpectralDistributionWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.bezier_control_points = [(0.2, 0), (0.4, 0.4), (0.7, 0.4), (0.9, 0)]
-        self.margin = 40
+        self.margin = 50
 
         self.wavelengths, self.xyz_values = load_color_matching_funcs()
         self.xyz_funcs = self.calc_xyz_funcs()
