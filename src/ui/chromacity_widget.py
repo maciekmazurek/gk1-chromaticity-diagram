@@ -1,5 +1,5 @@
 from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QPixmap, Qt
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QLabel, QWidget
 
 from utils import get_path_from_resources, load_color_matching_funcs
 
@@ -29,10 +29,10 @@ class ChromacityDiagramWidget(QWidget):
         self.coord_origin_y = int(coord_origin_y_original * scale_factor)
         self.coord_scale = coord_scale_original * scale_factor
 
-        self.XYZ = [0.0, 0.0, 0.0]
+        self.chromacity_point_XYZ = [0.0, 0.0, 0.0]
 
     def set_XYZ(self, XYZ: list[float]):
-        self.XYZ = XYZ
+        self.chromacity_point_XYZ = XYZ
         self.update()
 
     def paintEvent(self, event):
@@ -44,6 +44,7 @@ class ChromacityDiagramWidget(QWidget):
             self.draw_spectral_locus(painter)
             self.draw_sRGB_gamut(painter)
             self.draw_chromacity_point(painter)
+            self.fill_color_label()
         finally:
             painter.end()
 
@@ -53,11 +54,11 @@ class ChromacityDiagramWidget(QWidget):
         )
         painter.scale(1, -1)
 
-    def calc_xyz_values(self) -> tuple[float]:
-        XYZ_sum = sum(self.XYZ)
-        x = self.XYZ[0] / XYZ_sum
-        y = self.XYZ[1] / XYZ_sum
-        z = self.XYZ[2] / XYZ_sum
+    def calc_chromacity_point_xyz_values(self) -> tuple[float, float, float]:
+        XYZ_sum = sum(self.chromacity_point_XYZ)
+        x = self.chromacity_point_XYZ[0] / XYZ_sum
+        y = self.chromacity_point_XYZ[1] / XYZ_sum
+        z = self.chromacity_point_XYZ[2] / XYZ_sum
         return (x, y, z)
 
     def draw_circle(self, painter: QPainter, x: float, y: float, radius_px: int):
@@ -70,7 +71,7 @@ class ChromacityDiagramWidget(QWidget):
         )
 
     def draw_chromacity_point(self, painter: QPainter):
-        x, y, _ = self.calc_xyz_values()
+        x, y, _ = self.calc_chromacity_point_xyz_values()
         painter.setPen(QPen(QColor(0, 0, 0), 2))
         painter.setBrush(QBrush(QColor(255, 255, 255)))
         self.draw_circle(painter, x, y, 4)
@@ -132,7 +133,8 @@ class ChromacityDiagramWidget(QWidget):
         return (int(round(r * 255)), int(round(g * 255)), int(round(b * 255)))
 
     def draw_sRGB_gamut(self, painter: QPainter):
-        # Współrzędne 3 barw podstawowych - czerwony, zielony, niebieski
+        # Współrzędne 3 barw podstawowych na diagramie chromatyczności 
+        # (kolejno czerwony, zielony, niebieski)
         primary_colors_coords = [(0.64, 0.33), (0.3, 0.6), (0.15, 0.06)]
         painter.setBrush(QBrush(QColor(0, 0, 0)))
         painter.setPen(QPen(QColor(0, 0, 0)))
@@ -152,3 +154,10 @@ class ChromacityDiagramWidget(QWidget):
                 x2 * self.coord_scale,
                 y2 * self.coord_scale,
             )
+
+    def fill_color_label(self):
+        r, g, b = self.XYZ_to_sRGB(*self.chromacity_point_XYZ)
+        color_label = self.findChild(QLabel, "colorLabel")
+        color_label.setStyleSheet(
+            f"background-color: rgb({r}, {g}, {b}); border: 1px solid black;"
+        )

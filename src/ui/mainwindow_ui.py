@@ -15,8 +15,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QMainWindow, QMenuBar,
-    QSizePolicy, QStatusBar, QWidget)
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QMainWindow,
+    QMenuBar, QSizePolicy, QSpacerItem, QStatusBar,
+    QVBoxLayout, QWidget)
 
 from .chromacity_widget import ChromacityDiagramWidget
 from .spectral_widget import SpectralDistributionWidget
@@ -49,6 +50,29 @@ class Ui_MainWindow(object):
         self.chromacityDiagramWidget.setObjectName(u"chromacityDiagramWidget")
         sizePolicy.setHeightForWidth(self.chromacityDiagramWidget.sizePolicy().hasHeightForWidth())
         self.chromacityDiagramWidget.setSizePolicy(sizePolicy)
+        self.verticalLayout = QVBoxLayout(self.chromacityDiagramWidget)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.diagramWidget = QWidget(self.chromacityDiagramWidget)
+        self.diagramWidget.setObjectName(u"diagramWidget")
+        self.horizontalLayout = QHBoxLayout(self.diagramWidget)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalSpacer = QSpacerItem(405, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
+
+        self.colorLabel = QLabel(self.diagramWidget)
+        self.colorLabel.setObjectName(u"colorLabel")
+        self.colorLabel.setMinimumSize(QSize(50, 10))
+
+        self.horizontalLayout.addWidget(self.colorLabel)
+
+
+        self.verticalLayout.addWidget(self.diagramWidget)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout.addItem(self.verticalSpacer)
+
 
         self.horizontalLayout_3.addWidget(self.chromacityDiagramWidget)
 
@@ -68,5 +92,6 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"gk1-chromacity-diagram", None))
+        self.colorLabel.setText("")
     # retranslateUi
 

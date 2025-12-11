@@ -7,6 +7,7 @@ from scipy.interpolate import CubicSpline, interp1d
 from numerics.bezier import eval_bezier_curve
 from utils import load_color_matching_funcs
 
+EPS = 1e-5
 
 class SpectralDistributionWidget(QWidget):
     XYZChanged = Signal(list)
@@ -178,6 +179,20 @@ class SpectralDistributionWidget(QWidget):
         super().resizeEvent(event)
         self.draw_background()
 
+    def enforce_point_position(self, x: float, y: float, point_index: int):
+        """Wymusza położenie punktu, tak aby krzywa beziera zawsze
+        była poprawnie zdefiniowaną funkcją"""
+        if point_index != 0:
+            left_cp_x = self.bezier_control_points[point_index - 1][0]
+            if x <= left_cp_x:
+                x = left_cp_x + EPS
+        if point_index != len(self.bezier_control_points) - 1:
+            right_cp_x = self.bezier_control_points[point_index + 1][0]
+            if x >= right_cp_x:
+                x = right_cp_x - EPS
+        return (x, y)
+
+
     def mousePressEvent(self, event):
         if event.button() != Qt.LeftButton:
             return
@@ -189,6 +204,7 @@ class SpectralDistributionWidget(QWidget):
             return
         mouse_pos = self.transform_to_widget(event.position())
         x, y = self.scale_widget_to_norm(mouse_pos)
+        x, y = self.enforce_point_position(x, y, self._dragging_index)
 
         # Końcowe punkty kontrolne poruszamy tylko po osi X (y = 0)
         if self._dragging_index in (0, len(self.bezier_control_points) - 1):
@@ -228,6 +244,7 @@ class SpectralDistributionWidget(QWidget):
             insert_idx = 1
             while insert_idx < len(cps) - 1 and cps[insert_idx][0] <= x:
                 insert_idx += 1
+            x, y = self.enforce_point_position(x, y, insert_idx)
             cps.insert(insert_idx, (x, y))
             self.bezier_control_points = cps
         elif (
