@@ -9,7 +9,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.spectralDistributionWidget.xyzChanged.connect(
+        self.spectralDistributionWidget.XYZChanged.connect(
             self.chromacityDiagramWidget.set_XYZ
         )
 

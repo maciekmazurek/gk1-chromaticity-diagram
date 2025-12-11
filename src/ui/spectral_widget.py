@@ -9,15 +9,15 @@ from utils import load_color_matching_funcs
 
 
 class SpectralDistributionWidget(QWidget):
-    xyzChanged = Signal(list)
+    XYZChanged = Signal(list)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.bezier_control_points = [(0.2, 0), (0.4, 0.4), (0.7, 0.4), (0.9, 0)]
         self.margin = 50
 
-        self.wavelengths, self.xyz_values = load_color_matching_funcs()
-        self.xyz_funcs = self.calc_xyz_funcs()
+        self.wavelengths, self.cmfs_values = load_color_matching_funcs()
+        self.cmfs = self.calc_cmfs()
 
         self._dragging_index = None
         self._hit_radius_px = 8
@@ -101,14 +101,14 @@ class SpectralDistributionWidget(QWidget):
         x += self.wavelengths.min()
 
         y = norm_y.copy()
-        y *= self.xyz_values.max() - self.xyz_values.min()
-        y += self.xyz_values.min()
+        y *= self.cmfs_values.max() - self.cmfs_values.min()
+        y += self.cmfs_values.min()
 
         return (x, y)
 
     def draw_color_matching_funcs(self, painter: QPainter):
-        norm_wavelengths, norm_xyz_values = self.scale_spectral_to_norm(
-            self.wavelengths, self.xyz_values
+        norm_wavelengths, norm_cmfs_values = self.scale_spectral_to_norm(
+            self.wavelengths, self.cmfs_values
         )
         opacity = 50
         for i in range(3):
@@ -116,12 +116,12 @@ class SpectralDistributionWidget(QWidget):
             rgba_value = [0, 0, 0, opacity]
             rgba_value[i] = 255
             painter.setPen(QPen(QColor(*rgba_value), 2))
-            norm_func_values = norm_xyz_values[:, i]
+            norm_cmf_values = norm_cmfs_values[:, i]
             first_point = self.scale_norm_to_widget(
-                (norm_wavelengths[0], norm_func_values[0])
+                (norm_wavelengths[0], norm_cmf_values[0])
             )
             path.moveTo(first_point)
-            for wl, fv in zip(norm_wavelengths[1:], norm_func_values[1:]):
+            for wl, fv in zip(norm_wavelengths[1:], norm_cmf_values[1:]):
                 path.lineTo(self.scale_norm_to_widget((wl, fv)))
             painter.drawPath(path)
 
@@ -254,23 +254,23 @@ class SpectralDistributionWidget(QWidget):
         S_func = interp1d(x, y, kind="cubic", bounds_error=False, fill_value=0)
         return S_func
 
-    def calc_xyz_funcs(self) -> list[interp1d]:
-        xyz_funcs = []
+    def calc_cmfs(self) -> list[interp1d]:
+        cmfs = []
         x = self.wavelengths
         for i in range(3):
-            y = self.xyz_values[:, i]
-            xyz_funcs.append(
+            y = self.cmfs_values[:, i]
+            cmfs.append(
                 interp1d(x, y, kind="cubic", bounds_error=False, fill_value=0)
             )
-        return xyz_funcs
+        return cmfs
 
     def calc_XYZ(self):
         XYZ = []
         S_func = self.calc_spectral_func()
         x = S_func.x
-        for xyz_func in self.xyz_funcs:
-            y_product = xyz_func(x) * S_func(x)
+        for cmf in self.cmfs:
+            y_product = cmf(x) * S_func(x)
             integral = CubicSpline(x, y_product).integrate(x[0], x[-1])
             XYZ.append(integral)
 
-        self.xyzChanged.emit(XYZ)
+        self.XYZChanged.emit(XYZ)
