@@ -31,6 +31,9 @@ class ChromacityDiagramWidget(QWidget):
 
         self.chromacity_point_XYZ = [0.0, 0.0, 0.0]
 
+        self.show_gamut = True
+        self.show_spectral_locus = True
+
     def set_XYZ(self, XYZ: list[float]):
         self.chromacity_point_XYZ = XYZ
         self.update()
@@ -41,8 +44,10 @@ class ChromacityDiagramWidget(QWidget):
             painter.setRenderHint(QPainter.Antialiasing)
             painter.drawPixmap(0, self.fitted_offset_y, self.diagram_image)
             self.setup_coord_system_origin(painter)
-            self.draw_spectral_locus(painter)
-            self.draw_sRGB_gamut(painter)
+            if self.show_spectral_locus:
+                self.draw_spectral_locus(painter)
+            if self.show_gamut:
+                self.draw_sRGB_gamut(painter)
             self.draw_chromacity_point(painter)
             self.fill_color_label()
         finally:
@@ -120,11 +125,11 @@ class ChromacityDiagramWidget(QWidget):
         b_linear = 0.0557 * X - 0.2040 * Y + 1.0570 * Z
 
         def sRGB_gamma_correct(color_val: float) -> float:
-            color_val = max(0.0, min(1.0, color_val))
+            if color_val <= 0:
+                return 0.0
             if color_val <= 0.0031308:
                 return 12.92 * color_val
-            else:
-                return 1.055 * (color_val ** (1.0 / 2.4)) - 0.055
+            return 1.055 * (color_val ** (1.0 / 2.4)) - 0.055
 
         r = max(0.0, min(1.0, sRGB_gamma_correct(r_linear)))
         g = max(0.0, min(1.0, sRGB_gamma_correct(g_linear)))
@@ -133,7 +138,7 @@ class ChromacityDiagramWidget(QWidget):
         return (int(round(r * 255)), int(round(g * 255)), int(round(b * 255)))
 
     def draw_sRGB_gamut(self, painter: QPainter):
-        # Współrzędne 3 barw podstawowych na diagramie chromatyczności 
+        # Współrzędne 3 barw podstawowych na diagramie chromatyczności
         # (kolejno czerwony, zielony, niebieski)
         primary_colors_coords = [(0.64, 0.33), (0.3, 0.6), (0.15, 0.06)]
         painter.setBrush(QBrush(QColor(0, 0, 0)))
@@ -156,8 +161,18 @@ class ChromacityDiagramWidget(QWidget):
             )
 
     def fill_color_label(self):
-        r, g, b = self.XYZ_to_sRGB(*self.chromacity_point_XYZ)
+        x, y, _ = self.calc_chromacity_point_xyz_values()
+        X, Y, Z = self.xyY_to_XYZ(x, y, 1.0)
+        r, g, b = self.XYZ_to_sRGB(X, Y, Z)
         color_label = self.findChild(QLabel, "colorLabel")
         color_label.setStyleSheet(
             f"background-color: rgb({r}, {g}, {b}); border: 1px solid black;"
         )
+
+    def set_show_gamut(self, checked: bool):
+        self.show_gamut = checked
+        self.update()
+
+    def set_show_spectral_locus(self, checked: bool):
+        self.show_spectral_locus = checked
+        self.update()

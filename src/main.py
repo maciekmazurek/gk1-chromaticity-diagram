@@ -9,8 +9,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.setup_slots()
+
+    def setup_slots(self):
         self.spectralDistributionWidget.XYZChanged.connect(
             self.chromacityDiagramWidget.set_XYZ
+        )
+        self.gamutCheckBox.toggled.connect(self.chromacityDiagramWidget.set_show_gamut)
+        self.spectralLocusCheckBox.toggled.connect(
+            self.chromacityDiagramWidget.set_show_spectral_locus
         )
 
 

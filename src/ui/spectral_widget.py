@@ -9,6 +9,7 @@ from utils import load_color_matching_funcs
 
 EPS = 1e-5
 
+
 class SpectralDistributionWidget(QWidget):
     XYZChanged = Signal(list)
 
@@ -179,7 +180,7 @@ class SpectralDistributionWidget(QWidget):
         super().resizeEvent(event)
         self.draw_background()
 
-    def enforce_point_position(self, x: float, y: float, point_index: int):
+    def enforce_moving_point_position(self, x: float, y: float, point_index: int):
         """Wymusza położenie punktu, tak aby krzywa beziera zawsze
         była poprawnie zdefiniowaną funkcją"""
         if point_index != 0:
@@ -192,7 +193,6 @@ class SpectralDistributionWidget(QWidget):
                 x = right_cp_x - EPS
         return (x, y)
 
-
     def mousePressEvent(self, event):
         if event.button() != Qt.LeftButton:
             return
@@ -204,7 +204,7 @@ class SpectralDistributionWidget(QWidget):
             return
         mouse_pos = self.transform_to_widget(event.position())
         x, y = self.scale_widget_to_norm(mouse_pos)
-        x, y = self.enforce_point_position(x, y, self._dragging_index)
+        x, y = self.enforce_moving_point_position(x, y, self._dragging_index)
 
         # Końcowe punkty kontrolne poruszamy tylko po osi X (y = 0)
         if self._dragging_index in (0, len(self.bezier_control_points) - 1):
@@ -244,7 +244,16 @@ class SpectralDistributionWidget(QWidget):
             insert_idx = 1
             while insert_idx < len(cps) - 1 and cps[insert_idx][0] <= x:
                 insert_idx += 1
-            x, y = self.enforce_point_position(x, y, insert_idx)
+            # Enforcing proper control point x coordinate to keep the bezier
+            # curve a correct mathematical function
+            if insert_idx == 1:
+                start_cp_x = cps[0][0]
+                if x <= start_cp_x:
+                    x = start_cp_x + EPS
+            elif insert_idx == len(cps) - 1:
+                end_cp_x = cps[-1][0]
+                if x >= end_cp_x:
+                    x = end_cp_x - EPS
             cps.insert(insert_idx, (x, y))
             self.bezier_control_points = cps
         elif (
@@ -276,9 +285,7 @@ class SpectralDistributionWidget(QWidget):
         x = self.wavelengths
         for i in range(3):
             y = self.cmfs_values[:, i]
-            cmfs.append(
-                interp1d(x, y, kind="cubic", bounds_error=False, fill_value=0)
-            )
+            cmfs.append(interp1d(x, y, kind="cubic", bounds_error=False, fill_value=0))
         return cmfs
 
     def calc_XYZ(self):
