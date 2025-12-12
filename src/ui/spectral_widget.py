@@ -183,16 +183,29 @@ class SpectralDistributionWidget(QWidget):
         self.draw_background()
 
     def enforce_moving_point_position(self, x: float, y: float, point_index: int):
-        """Wymusza położenie punktu, tak aby krzywa beziera zawsze
-        była poprawnie zdefiniowaną funkcją"""
-        if point_index != 0:
+        """Wymusza położenie punktu podczas poruszania, tak aby krzywa beziera
+        zawsze była poprawnie zdefiniowaną funkcją"""
+        n = len(self.bezier_control_points)
+        if n < 2:
+            return (x, y)
+
+        # Punkt lewy brzegowy – trzymamy go w (>= EPS, <= x_sasiada - EPS)
+        if point_index == 0:
+            right_cp_x = self.bezier_control_points[1][0]
+            x = max(EPS, min(x, right_cp_x - EPS))
+        # Punkt prawy brzegowy – trzymamy go w (>= x_sasiada + EPS, <= 1 - EPS)
+        elif point_index == n - 1:
+            left_cp_x = self.bezier_control_points[n - 2][0]
+            x = min(1.0 - EPS, max(x, left_cp_x + EPS))
+        # Punkty wewnętrzne – zawsze pomiędzy sąsiadami
+        else:
             left_cp_x = self.bezier_control_points[point_index - 1][0]
+            right_cp_x = self.bezier_control_points[point_index + 1][0]
             if x <= left_cp_x:
                 x = left_cp_x + EPS
-        if point_index != len(self.bezier_control_points) - 1:
-            right_cp_x = self.bezier_control_points[point_index + 1][0]
             if x >= right_cp_x:
                 x = right_cp_x - EPS
+
         return (x, y)
 
     def mousePressEvent(self, event):
@@ -246,16 +259,11 @@ class SpectralDistributionWidget(QWidget):
             insert_idx = 1
             while insert_idx < len(cps) - 1 and cps[insert_idx][0] <= x:
                 insert_idx += 1
-            # Enforcing proper control point x coordinate to keep the bezier
-            # curve a correct mathematical function
-            if insert_idx == 1:
-                start_cp_x = cps[0][0]
-                if x <= start_cp_x:
-                    x = start_cp_x + EPS
-            elif insert_idx == len(cps) - 1:
-                end_cp_x = cps[-1][0]
-                if x >= end_cp_x:
-                    x = end_cp_x - EPS
+            # Wymuszamy położenie nowego punktu pomiędzy sąsiadami tak,
+            # aby nie nakładał się po X z istniejącymi punktami
+            prev_x = cps[insert_idx - 1][0]
+            next_x = cps[insert_idx][0]
+            x = max(prev_x + EPS, min(x, next_x - EPS))
             cps.insert(insert_idx, (x, y))
             self.bezier_control_points = cps
         elif (

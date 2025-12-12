@@ -43,6 +43,45 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.spectralDistributionWidget.sizePolicy().hasHeightForWidth())
         self.spectralDistributionWidget.setSizePolicy(sizePolicy)
         self.spectralDistributionWidget.setMinimumSize(QSize(550, 0))
+        self.verticalLayout_2 = QVBoxLayout(self.spectralDistributionWidget)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.XYZWidget = QWidget(self.spectralDistributionWidget)
+        self.XYZWidget.setObjectName(u"XYZWidget")
+        self.horizontalLayout_5 = QHBoxLayout(self.XYZWidget)
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.horizontalSpacer_4 = QSpacerItem(471, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_5.addItem(self.horizontalSpacer_4)
+
+        self.XYZLabelsWidget = QWidget(self.XYZWidget)
+        self.XYZLabelsWidget.setObjectName(u"XYZLabelsWidget")
+        self.verticalLayout_3 = QVBoxLayout(self.XYZLabelsWidget)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.XLabel = QLabel(self.XYZLabelsWidget)
+        self.XLabel.setObjectName(u"XLabel")
+
+        self.verticalLayout_3.addWidget(self.XLabel)
+
+        self.YLabel = QLabel(self.XYZLabelsWidget)
+        self.YLabel.setObjectName(u"YLabel")
+
+        self.verticalLayout_3.addWidget(self.YLabel)
+
+        self.ZLabel = QLabel(self.XYZLabelsWidget)
+        self.ZLabel.setObjectName(u"ZLabel")
+
+        self.verticalLayout_3.addWidget(self.ZLabel)
+
+
+        self.horizontalLayout_5.addWidget(self.XYZLabelsWidget)
+
+
+        self.verticalLayout_2.addWidget(self.XYZWidget)
+
+        self.verticalSpacer_2 = QSpacerItem(20, 334, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_2.addItem(self.verticalSpacer_2)
+
 
         self.horizontalLayout_3.addWidget(self.spectralDistributionWidget)
 
@@ -137,6 +176,9 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"gk1-chromacity-diagram", None))
+        self.XLabel.setText(QCoreApplication.translate("MainWindow", u"X:  ", None))
+        self.YLabel.setText(QCoreApplication.translate("MainWindow", u"Y:  ", None))
+        self.ZLabel.setText(QCoreApplication.translate("MainWindow", u"Z:  ", None))
         self.colorDescriptionLabel.setText(QCoreApplication.translate("MainWindow", u"Current Color:  ", None))
         self.colorLabel.setText("")
         self.gamutCheckBox.setText(QCoreApplication.translate("MainWindow", u"Show sRGB gamut", None))

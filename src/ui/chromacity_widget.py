@@ -1,10 +1,13 @@
 from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QPixmap, Qt
 from PySide6.QtWidgets import QLabel, QWidget
+from PySide6.QtCore import Signal
 
 from utils import get_path_from_resources, load_color_matching_funcs
 
 
 class ChromacityDiagramWidget(QWidget):
+    colorChanged = Signal(tuple)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         diagram_image_original = QPixmap(get_path_from_resources("cie_xyz.png"))
@@ -36,6 +39,7 @@ class ChromacityDiagramWidget(QWidget):
 
     def set_XYZ(self, XYZ: list[float]):
         self.chromacity_point_XYZ = XYZ
+        self.colorChanged.emit(self.calc_current_RGB_val())
         self.update()
 
     def paintEvent(self, event):
@@ -49,7 +53,6 @@ class ChromacityDiagramWidget(QWidget):
             if self.show_gamut:
                 self.draw_sRGB_gamut(painter)
             self.draw_chromacity_point(painter)
-            self.fill_color_label()
         finally:
             painter.end()
 
@@ -175,14 +178,11 @@ class ChromacityDiagramWidget(QWidget):
                 y2 * self.coord_scale,
             )
 
-    def fill_color_label(self):
+    def calc_current_RGB_val(self) -> tuple[int]:
         x, y, _ = self.calc_chromacity_point_xyz_values()
         X, Y, Z = self.xyY_to_XYZ(x, y, 1.0)
         r, g, b = self.XYZ_to_sRGB(X, Y, Z)
-        color_label = self.findChild(QLabel, "colorLabel")
-        color_label.setStyleSheet(
-            f"background-color: rgb({r}, {g}, {b}); border: 1px solid black;"
-        )
+        return (r, g, b)
 
     def set_show_gamut(self, checked: bool):
         self.show_gamut = checked
