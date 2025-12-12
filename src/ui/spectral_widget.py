@@ -50,8 +50,10 @@ class SpectralDistributionWidget(QWidget):
         painter = QPainter(background)
         try:
             self.setup_painter(painter)
-            self.draw_coord_system(painter)
+            self.setup_coord_system_origin(painter)
             self.draw_color_matching_funcs(painter)
+            painter.setPen(QPen(QColor(0, 0, 0), 2))
+            self.draw_coord_system(painter)
         finally:
             painter.end()
         self.background = background
@@ -66,10 +68,10 @@ class SpectralDistributionWidget(QWidget):
         return x_axis_length, y_axis_length
 
     def draw_coord_system(self, painter: QPainter):
-        self.setup_coord_system_origin(painter)
         x_axis_length, y_axis_length = self.calc_axis_lengths()
         painter.drawLine(0, 0, x_axis_length, 0)
         painter.drawLine(0, 0, 0, y_axis_length)
+        self.draw_axis_ticks_and_labels(painter, x_axis_length, y_axis_length)
 
     def scale_norm_to_widget(self, point: tuple[float, float]) -> QPointF:
         x_axis_length, y_axis_length = self.calc_axis_lengths()
@@ -298,3 +300,61 @@ class SpectralDistributionWidget(QWidget):
             XYZ.append(integral)
 
         self.XYZChanged.emit(XYZ)
+
+    def draw_axis_ticks_and_labels(
+        self, painter: QPainter, x_axis_length: int, y_axis_length: int
+    ):
+        painter.save()
+        tick_len = 6
+        font = painter.font()
+        font.setPointSize(8)
+        painter.setFont(font)
+
+        # X axis
+        wl_min = float(self.wavelengths[0])
+        wl_max = float(self.wavelengths[-1])
+        wl_step = 50
+
+        # Drawing ticks
+        for wl in range(int(wl_min), int(wl_max) + 1, wl_step):
+            t = (wl - wl_min) / (wl_max - wl_min)  # [0, 1]
+            x = t * x_axis_length
+            painter.drawLine(x, 0, x, -tick_len)
+
+        # napisy przy osi X – odwracamy Y, żeby tekst nie był do góry nogami
+        painter.scale(1, -1)
+        label_y = 21  # piksele poniżej osi X
+
+        # Drawing text
+        for wl in range(int(wl_min), int(wl_max) + 1, wl_step):
+            t = (wl - wl_min) / (wl_max - wl_min)
+            x = t * x_axis_length
+            text = f"{wl} [nm]" if wl == int(wl_max) else f"{wl}"
+            # lekko przesuwamy w lewo, żeby tekst był pod kreską
+            painter.drawText(x - 12, label_y, text)
+
+        # Y axis
+        painter.scale(1, -1)  # wracamy do układu z Y w górę
+        y_max = 1.8
+        y_step = 0.2
+
+        # Drawing ticks
+        for i in range(int(y_max / y_step) + 1):
+            val = i * y_step
+            t = val / y_max  # [0,1]
+            y = t * y_axis_length
+            painter.drawLine(0, y, -tick_len, y)  # kreska w lewo
+
+        # napisy przy osi Y – odwracamy Y, żeby tekst nie był do góry nogami
+        painter.scale(1, -1)
+        label_x = -30  # piksele na lewo od osi Y
+
+        # Drawing text
+        for i in range(int(y_max / y_step) + 1):
+            val = i * y_step
+            t = val / y_max
+            y = -t * y_axis_length  # po odwróceniu Y ma przeciwny znak
+            text = f"{val:.1f}"
+            painter.drawText(label_x, y + 3, text)
+
+        painter.restore()

@@ -77,9 +77,24 @@ class ChromacityDiagramWidget(QWidget):
 
     def draw_chromacity_point(self, painter: QPainter):
         x, y, _ = self.calc_chromacity_point_xyz_values()
-        painter.setPen(QPen(QColor(0, 0, 0), 2))
-        painter.setBrush(QBrush(QColor(255, 255, 255)))
+        painter.setPen(QPen(QColor(0, 0, 0)))
+        painter.setBrush(QBrush(QColor(0, 0, 0)))
         self.draw_circle(painter, x, y, 4)
+        self.draw_chromacity_point_text(painter, x, y, f"(x={round(x, 2)},y={round(y, 2)})")
+
+    def draw_chromacity_point_text(self, painter: QPainter, x: float, y: float, text: str):
+        painter.save()
+        # Odwracamy układ, aby napis nie był odwrócony do góry nogami
+        painter.scale(1, -1)
+        font = painter.font()
+        font.setPointSize(8)
+        font.setBold(True)
+        painter.setFont(font)
+        shift = 10
+        x_scaled = x * self.coord_scale + shift
+        y_scaled = -(y * self.coord_scale) - shift
+        painter.drawText(x_scaled, y_scaled, text)
+        painter.restore()
 
     def draw_spectral_locus(self, painter: QPainter):
         locus_points = self.calc_spectral_locus_points()
