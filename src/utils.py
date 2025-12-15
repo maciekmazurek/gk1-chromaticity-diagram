@@ -1,9 +1,10 @@
 from pathlib import Path
+from typing import Tuple
 
 import numpy as np
 
 
-def load_color_matching_funcs() -> tuple[np.ndarray, np.ndarray]:
+def load_color_matching_funcs() -> Tuple[np.ndarray, np.ndarray]:
     """Load CIE color matching functions values.
 
     Returns
@@ -23,6 +24,6 @@ def load_color_matching_funcs() -> tuple[np.ndarray, np.ndarray]:
     return (wavelenghts, xyz)
 
 
-def get_path_from_resources(relative_path: str) -> str:
+def get_path_from_resources(relative_path: str) -> Path:
     project_dir = Path(__file__).resolve().parent.parent
     return project_dir / "resources" / relative_path

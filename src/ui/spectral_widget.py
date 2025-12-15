@@ -1,10 +1,14 @@
+from __future__ import annotations
+
+from typing import List, Optional, Tuple
+
 import numpy as np
 from PySide6.QtCore import QPointF, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import QMenu, QWidget
-from scipy.interpolate import CubicSpline, interp1d
 
 from numerics.bezier import eval_bezier_curve
+from numerics.spectral import calc_XYZ_from_bezier
 from utils import load_color_matching_funcs
 
 EPS = 1e-5
@@ -13,21 +17,24 @@ EPS = 1e-5
 class SpectralDistributionWidget(QWidget):
     XYZChanged = Signal(list)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.bezier_control_points = [(0.2, 0), (0.4, 0.4), (0.7, 0.4), (0.9, 0)]
-        self.margin = 50
+        self.bezier_control_points: List[Tuple[float, float]] = [
+            (0.2, 0.0),
+            (0.4, 0.4),
+            (0.7, 0.4),
+            (0.9, 0.0),
+        ]
+        self.margin: int = 50
 
         self.wavelengths, self.cmfs_values = load_color_matching_funcs()
-        self.cmfs = self.calc_cmfs()
 
-        self._dragging_index = None
-        self._hit_radius_px = 8
+        self._dragging_index: Optional[int] = None
+        self._hit_radius_px: int = 8
         self.setMouseTracking(True)
+        self.background: Optional[QPixmap] = None
 
-        self.background: QPixmap = None
-
-    def paintEvent(self, event):
+    def paintEvent(self, event) -> None:
         painter = QPainter(self)
         try:
             self.setup_painter(painter)
@@ -41,10 +48,10 @@ class SpectralDistributionWidget(QWidget):
         finally:
             painter.end()
 
-    def setup_painter(self, painter: QPainter):
+    def setup_painter(self, painter: QPainter) -> None:
         painter.setRenderHint(QPainter.Antialiasing)
 
-    def draw_background(self):
+    def draw_background(self) -> None:
         background = QPixmap(self.width(), self.height())
         background.fill(Qt.transparent)
         painter = QPainter(background)
@@ -58,7 +65,7 @@ class SpectralDistributionWidget(QWidget):
             painter.end()
         self.background = background
 
-    def setup_coord_system_origin(self, painter: QPainter):
+    def setup_coord_system_origin(self, painter: QPainter) -> None:
         painter.translate(self.margin, self.height() - self.margin)
         painter.scale(1, -1)
 
@@ -67,7 +74,7 @@ class SpectralDistributionWidget(QWidget):
         y_axis_length = self.height() - 2 * self.margin
         return x_axis_length, y_axis_length
 
-    def draw_coord_system(self, painter: QPainter):
+    def draw_coord_system(self, painter: QPainter) -> None:
         x_axis_length, y_axis_length = self.calc_axis_lengths()
         painter.drawLine(0, 0, x_axis_length, 0)
         painter.drawLine(0, 0, 0, y_axis_length)
@@ -81,14 +88,15 @@ class SpectralDistributionWidget(QWidget):
 
     def scale_widget_to_norm(self, point: QPointF) -> tuple[float, float]:
         x_axis_length, y_axis_length = self.calc_axis_lengths()
-        # Skalujemy wartości, a następnie clamp-ujemy do znormalizowanego
-        # przedziału [0,1], tak aby punkty nie wychodziły poza rysowany
-        # układ współrzędnych
+        # Scale values and then clamp to the normalized interval [0,1]
+        # so points do not leave the drawn coordinate system
         x = max(0.0, min(1.0, point.x() / x_axis_length))
         y = max(0.0, min(1.0, point.y() / y_axis_length))
         return (x, y)
 
-    def scale_spectral_to_norm(self, x: np.ndarray, y: np.ndarray):
+    def scale_spectral_to_norm(
+        self, x: np.ndarray, y: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         norm_x = x.copy()
         norm_x -= norm_x.min()
         norm_x /= norm_x.max()
@@ -99,18 +107,7 @@ class SpectralDistributionWidget(QWidget):
 
         return (norm_x, norm_y)
 
-    def scale_norm_to_spectral(self, norm_x: np.ndarray, norm_y: np.ndarray):
-        x = norm_x.copy()
-        x *= self.wavelengths.max() - self.wavelengths.min()
-        x += self.wavelengths.min()
-
-        y = norm_y.copy()
-        y *= self.cmfs_values.max() - self.cmfs_values.min()
-        y += self.cmfs_values.min()
-
-        return (x, y)
-
-    def draw_color_matching_funcs(self, painter: QPainter):
+    def draw_color_matching_funcs(self, painter: QPainter) -> None:
         norm_wavelengths, norm_cmfs_values = self.scale_spectral_to_norm(
             self.wavelengths, self.cmfs_values
         )
@@ -129,7 +126,7 @@ class SpectralDistributionWidget(QWidget):
                 path.lineTo(self.scale_norm_to_widget((wl, fv)))
             painter.drawPath(path)
 
-    def draw_bezier_curve(self, painter: QPainter):
+    def draw_bezier_curve(self, painter: QPainter) -> None:
         samples = 100
         curve_points = eval_bezier_curve(self.bezier_control_points, samples)
 
@@ -155,16 +152,20 @@ class SpectralDistributionWidget(QWidget):
         for p in self.bezier_control_points:
             painter.drawEllipse(self.scale_norm_to_widget(p), 3, 3)
 
+    def calc_XYZ(self) -> None:
+        XYZ = calc_XYZ_from_bezier(
+            self.bezier_control_points, self.wavelengths, self.cmfs_values
+        )
+        self.XYZChanged.emit(XYZ)
+
     def transform_to_widget(self, point: QPointF) -> QPointF:
-        """Przekształca punkt z oryginalnego, domyślnego układu współrzędnych widgetu do układu
-        współrzędnych wykorzystywanego do rysowania uwzględniającego margines i odwrócenie osi Y"""
+        """Transform a point from the widget's default coordinate system to the
+        drawing coordinate system accounting for margin and inverted Y axis"""
         x = point.x() - self.margin
         y = (self.height() - self.margin) - point.y()
         return QPointF(x, y)
 
-    def control_point_hit_test(self, mouse_pos: QPointF) -> int | None:
-        """Sprawdza czy kursor myszy wchodzi w interakcję z punktem kontrolnym.
-        Jeżeli tak zwraca jego indeks, jeżeli nie zwraca None"""
+    def control_point_hit_test(self, mouse_pos: QPointF) -> Optional[int]:
         candidates: list[int] = []
         widget_control_points = [
             self.scale_norm_to_widget(cp) for cp in self.bezier_control_points
@@ -179,34 +180,32 @@ class SpectralDistributionWidget(QWidget):
         if not candidates:
             return None
 
-        # Priorytet: najpierw punkty wewnętrzne (niekońcowe), a przy remisie
-        # wybieramy ten o większym indeksie (zwykle "nowszy" punkt).
         n = len(self.bezier_control_points)
         inner = [i for i in candidates if i not in (0, n - 1)]
         if inner:
             return max(inner)
         return max(candidates)
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self.draw_background()
 
     def enforce_moving_point_position(self, x: float, y: float, point_index: int):
-        """Wymusza położenie punktu podczas poruszania, tak aby krzywa beziera
-        zawsze była poprawnie zdefiniowaną funkcją"""
+        """Enforce point position while moving so the Bézier curve remains
+        a properly defined function"""
         n = len(self.bezier_control_points)
         if n < 2:
             return (x, y)
 
-        # Punkt lewy brzegowy – trzymamy go w (>= EPS, <= x_sasiada - EPS)
+        # Left endpoint — keep it within (>= EPS, <= neighbor_x - EPS)
         if point_index == 0:
             right_cp_x = self.bezier_control_points[1][0]
             x = max(EPS, min(x, right_cp_x - EPS))
-        # Punkt prawy brzegowy – trzymamy go w (>= x_sasiada + EPS, <= 1 - EPS)
+        # Right endpoint — keep it within (>= neighbor_x + EPS, <= 1 - EPS)
         elif point_index == n - 1:
             left_cp_x = self.bezier_control_points[n - 2][0]
             x = min(1.0 - EPS, max(x, left_cp_x + EPS))
-        # Punkty wewnętrzne – zawsze pomiędzy sąsiadami
+        # Inner points — always between neighbors
         else:
             left_cp_x = self.bezier_control_points[point_index - 1][0]
             right_cp_x = self.bezier_control_points[point_index + 1][0]
@@ -217,31 +216,31 @@ class SpectralDistributionWidget(QWidget):
 
         return (x, y)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event) -> None:
         if event.button() != Qt.LeftButton:
             return
         mouse_pos = self.transform_to_widget(event.position())
         self._dragging_index = self.control_point_hit_test(mouse_pos)
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event) -> None:
         if self._dragging_index is None:
             return
         mouse_pos = self.transform_to_widget(event.position())
         x, y = self.scale_widget_to_norm(mouse_pos)
         x, y = self.enforce_moving_point_position(x, y, self._dragging_index)
 
-        # Końcowe punkty kontrolne poruszamy tylko po osi X (y = 0)
+        # Move end control points only along X (y = 0)
         if self._dragging_index in (0, len(self.bezier_control_points) - 1):
             y = 0.0
 
         self.bezier_control_points[self._dragging_index] = (x, y)
         self.update()
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event) -> None:
         if event.button() == Qt.LeftButton:
             self._dragging_index = None
 
-    def contextMenuEvent(self, event):
+    def contextMenuEvent(self, event) -> None:
         mouse_pos = self.transform_to_widget(event.pos())
         x_axis_length, y_axis_length = self.calc_axis_lengths()
 
@@ -268,8 +267,8 @@ class SpectralDistributionWidget(QWidget):
             insert_idx = 1
             while insert_idx < len(cps) - 1 and cps[insert_idx][0] <= x:
                 insert_idx += 1
-            # Wymuszamy położenie nowego punktu pomiędzy sąsiadami tak,
-            # aby nie nakładał się po X z istniejącymi punktami
+            # Force the new point between neighbors so it does not overlap by X
+            # with existing points
             prev_x = cps[insert_idx - 1][0]
             next_x = cps[insert_idx][0]
             x = max(prev_x + EPS, min(x, next_x - EPS))
@@ -286,37 +285,6 @@ class SpectralDistributionWidget(QWidget):
                 del self.bezier_control_points[cp_idx]
 
         self.update()
-
-    def calc_spectral_func(self) -> interp1d:
-        # Liczymy funkcję widmową poprzez interpolację krzywej beziera
-        samples = 100
-        curve_points = eval_bezier_curve(self.bezier_control_points, samples)
-        x = np.array([p[0] for p in curve_points], dtype=float)
-        y = np.array([p[1] for p in curve_points], dtype=float)
-        # Skalujemy do [380, 780] x [0, ~1.8]
-        x, y = self.scale_norm_to_spectral(x, y)
-        # Dla wartości x z poza zakresu zwracamy 0
-        S_func = interp1d(x, y, kind="cubic", bounds_error=False, fill_value=0)
-        return S_func
-
-    def calc_cmfs(self) -> list[interp1d]:
-        cmfs = []
-        x = self.wavelengths
-        for i in range(3):
-            y = self.cmfs_values[:, i]
-            cmfs.append(interp1d(x, y, kind="cubic", bounds_error=False, fill_value=0))
-        return cmfs
-
-    def calc_XYZ(self):
-        XYZ = []
-        S_func = self.calc_spectral_func()
-        x = S_func.x
-        for cmf in self.cmfs:
-            y_product = cmf(x) * S_func(x)
-            integral = CubicSpline(x, y_product).integrate(x[0], x[-1])
-            XYZ.append(integral)
-
-        self.XYZChanged.emit(XYZ)
 
     def draw_axis_ticks_and_labels(
         self, painter: QPainter, x_axis_length: int, y_axis_length: int
@@ -338,20 +306,20 @@ class SpectralDistributionWidget(QWidget):
             x = t * x_axis_length
             painter.drawLine(x, 0, x, -tick_len)
 
-        # napisy przy osi X – odwracamy Y, żeby tekst nie był do góry nogami
+        # Flip Y so the text isn't upside down
         painter.scale(1, -1)
-        label_y = 21  # piksele poniżej osi X
+        label_y = 21  # pixels below X axis
 
         # Drawing text
         for wl in range(int(wl_min), int(wl_max) + 1, wl_step):
             t = (wl - wl_min) / (wl_max - wl_min)
             x = t * x_axis_length
             text = f"{wl} [nm]" if wl == int(wl_max) else f"{wl}"
-            # lekko przesuwamy w lewo, żeby tekst był pod kreską
+            # shift slightly to the left to place text under the tick
             painter.drawText(x - 12, label_y, text)
 
         # Y axis
-        painter.scale(1, -1)  # wracamy do układu z Y w górę
+        painter.scale(1, -1)  # return to the coordinate system with Y up
         y_max = 1.8
         y_step = 0.2
 
@@ -360,17 +328,17 @@ class SpectralDistributionWidget(QWidget):
             val = i * y_step
             t = val / y_max  # [0,1]
             y = t * y_axis_length
-            painter.drawLine(0, y, -tick_len, y)  # kreska w lewo
+            painter.drawLine(0, y, -tick_len, y)  # tick to the left
 
-        # napisy przy osi Y – odwracamy Y, żeby tekst nie był do góry nogami
+        # Flip Y so the text isn't upside down
         painter.scale(1, -1)
-        label_x = -30  # piksele na lewo od osi Y
+        label_x = -30  # pixels to the left of the Y axis
 
         # Drawing text
         for i in range(int(y_max / y_step) + 1):
             val = i * y_step
             t = val / y_max
-            y = -t * y_axis_length  # po odwróceniu Y ma przeciwny znak
+            y = -t * y_axis_length  # after flipping, Y has the opposite sign
             text = f"{val:.1f}"
             painter.drawText(label_x, y + 3, text)
 

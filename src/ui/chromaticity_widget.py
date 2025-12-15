@@ -1,9 +1,13 @@
+from __future__ import annotations
+
+from typing import List, Optional, Tuple
+
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QPixmap, Qt
 from PySide6.QtWidgets import QWidget
 
+from color.space import XYZ_to_sRGB, xyY_to_XYZ
 from utils import get_path_from_resources, load_color_matching_funcs
-from color.space import xyY_to_XYZ, XYZ_to_sRGB
 
 
 class ChromaticityDiagramWidget(QWidget):
@@ -12,15 +16,15 @@ class ChromaticityDiagramWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         diagram_image_original = QPixmap(get_path_from_resources("cie_xyz.png"))
-        # Współrzędne piksela będącego środkiem układu współrzędnych w
-        # oryginalnym obrazie
+        # Coordinates of the pixel that is the origin of the coordinate system
+        # in the original image
         coord_origin_x_original = 145
         coord_origin_y_original = 1153
-        # Liczba pikseli przypadająca na długość zakresu [0.0, 1.0] w układzie
-        # współrzędnych z oryginalnego obrazu
+        # Number of pixels corresponding to the length of the [0.0, 1.0] range
+        # in the coordinate system of the original image
         coord_scale_original = 1220
-        # Stała, dopasowana wysokość i szerokość obrazka oraz przesunięcie we
-        # współrzędnej Y-owej, tak aby obraz ładnie wpasowywał się w widget
+        # Fixed, fitted image height, width and a Y offset so the image fits
+        # nicely into the widget
         fitted_width = 450
         fitted_height = 440
         self.fitted_offset_y = 30
@@ -29,23 +33,27 @@ class ChromaticityDiagramWidget(QWidget):
             fitted_width, fitted_height, Qt.KeepAspectRatio, Qt.SmoothTransformation
         )
         scale_factor = self.diagram_image.width() / diagram_image_original.width()
-        self.coord_origin_x = int(coord_origin_x_original * scale_factor)
-        self.coord_origin_y = int(coord_origin_y_original * scale_factor)
-        self.coord_scale = coord_scale_original * scale_factor
+        self.coord_origin_x: int = int(coord_origin_x_original * scale_factor)
+        self.coord_origin_y: int = int(coord_origin_y_original * scale_factor)
+        self.coord_scale: float = coord_scale_original * scale_factor
 
-        self.chromaticity_point_XYZ = [0.0, 0.0, 0.0]
+        self.chromaticity_point_XYZ: List[float] = [0.0, 0.0, 0.0]
 
-        self.show_gamut = True
-        self.show_spectral_locus = True
+        self.show_gamut: bool = True
+        self.show_spectral_locus: bool = True
 
-        self.locus_points = self.calc_spectral_locus_points()
+        self.locus_points: List[Tuple[float, float, QColor]] = (
+            self.calc_spectral_locus_points()
+        )
 
-    def set_XYZ(self, XYZ: list[float]):
+    def set_XYZ(self, XYZ: List[float]) -> None:
         self.chromaticity_point_XYZ = XYZ
-        self.colorChanged.emit(self.calc_current_RGB_val())
+        rgb = self.calc_current_RGB_val()
+        if rgb is not None:
+            self.colorChanged.emit(self.calc_current_RGB_val())
         self.update()
 
-    def paintEvent(self, event):
+    def paintEvent(self, event) -> None:
         painter = QPainter(self)
         try:
             painter.setRenderHint(QPainter.Antialiasing)
@@ -59,20 +67,26 @@ class ChromaticityDiagramWidget(QWidget):
         finally:
             painter.end()
 
-    def setup_coord_system_origin(self, painter: QPainter):
+    def setup_coord_system_origin(self, painter: QPainter) -> None:
         painter.translate(
             self.coord_origin_x, self.coord_origin_y + self.fitted_offset_y
         )
         painter.scale(1, -1)
 
-    def calc_chromaticity_point_xyz_values(self) -> tuple[float, float, float]:
+    def calc_chromaticity_point_xyz_values(
+        self,
+    ) -> Optional[Tuple[float, float, float]]:
         XYZ_sum = sum(self.chromaticity_point_XYZ)
+        if XYZ_sum <= 0:
+            return None
         x = self.chromaticity_point_XYZ[0] / XYZ_sum
         y = self.chromaticity_point_XYZ[1] / XYZ_sum
         z = self.chromaticity_point_XYZ[2] / XYZ_sum
         return (x, y, z)
 
-    def draw_circle(self, painter: QPainter, x: float, y: float, radius_px: int):
+    def draw_circle(
+        self, painter: QPainter, x: float, y: float, radius_px: int
+    ) -> None:
         diameter_px = radius_px * 2
         painter.drawEllipse(
             x * self.coord_scale - radius_px,
@@ -81,23 +95,22 @@ class ChromaticityDiagramWidget(QWidget):
             diameter_px,
         )
 
-    def draw_chromaticity_point(self, painter: QPainter):
-        x, y, _ = self.calc_chromaticity_point_xyz_values()
-        painter.setPen(QPen(QColor(0, 0, 0)))
-        painter.setBrush(QBrush(QColor(0, 0, 0)))
-        try:
+    def draw_chromaticity_point(self, painter: QPainter) -> None:
+        xyz = self.calc_chromaticity_point_xyz_values()
+        if xyz is not None:
+            x, y, _ = xyz
+            painter.setPen(QPen(QColor(0, 0, 0)))
+            painter.setBrush(QBrush(QColor(0, 0, 0)))
             self.draw_circle(painter, x, y, 4)
             self.draw_chromaticity_point_text(
                 painter, x, y, f"(x={round(x, 2)},y={round(y, 2)})"
             )
-        except OverflowError:
-            pass
 
     def draw_chromaticity_point_text(
         self, painter: QPainter, x: float, y: float, text: str
-    ):
+    ) -> None:
         painter.save()
-        # Odwracamy układ, aby napis nie był odwrócony do góry nogami
+        # Flip the coordinate system so the text is not upside down
         painter.scale(1, -1)
         font = painter.font()
         font.setPointSize(8)
@@ -109,7 +122,7 @@ class ChromaticityDiagramWidget(QWidget):
         painter.drawText(x_scaled, y_scaled, text)
         painter.restore()
 
-    def draw_spectral_locus(self, painter: QPainter):
+    def draw_spectral_locus(self, painter: QPainter) -> None:
         for point in self.locus_points:
             x = point[0]
             y = point[1]
@@ -118,11 +131,11 @@ class ChromaticityDiagramWidget(QWidget):
             painter.setPen(QPen(color))
             self.draw_circle(painter, x, y, 2)
 
-    def calc_spectral_locus_points(self) -> list[tuple[float, float, QColor]]:
+    def calc_spectral_locus_points(self) -> List[Tuple[float, float, QColor]]:
         wavelenghts, cmfs_values = load_color_matching_funcs()
         locus_points = []
 
-        # Ucinamy zakres aby dopasować dane do obrazka
+        # Trim the range to match the image
         mask = wavelenghts <= 680
         cmfs_values = cmfs_values[mask]
 
@@ -138,9 +151,9 @@ class ChromaticityDiagramWidget(QWidget):
 
         return locus_points
 
-    def draw_sRGB_gamut(self, painter: QPainter):
-        # Współrzędne 3 barw podstawowych na diagramie chromatyczności
-        # (kolejno czerwony, zielony, niebieski)
+    def draw_sRGB_gamut(self, painter: QPainter) -> None:
+        # Coordinates of the 3 primary colors on the chromaticity diagram
+        # (red, green, blue in order)
         primary_colors_coords = [(0.64, 0.33), (0.3, 0.6), (0.15, 0.06)]
         painter.setBrush(QBrush(QColor(0, 0, 0)))
         painter.setPen(QPen(QColor(0, 0, 0)))
@@ -161,16 +174,19 @@ class ChromaticityDiagramWidget(QWidget):
                 y2 * self.coord_scale,
             )
 
-    def calc_current_RGB_val(self) -> tuple[int]:
-        x, y, _ = self.calc_chromaticity_point_xyz_values()
-        X, Y, Z = xyY_to_XYZ(x, y, 1.0)
-        r, g, b = XYZ_to_sRGB(X, Y, Z)
-        return (r, g, b)
+    def calc_current_RGB_val(self) -> Tuple[int, int, int]:
+        xyz = self.calc_chromaticity_point_xyz_values()
+        if xyz is not None:
+            x, y, _ = xyz
+            X, Y, Z = xyY_to_XYZ(x, y, 1.0)
+            r, g, b = XYZ_to_sRGB(X, Y, Z)
+            return (r, g, b)
+        return (0, 0, 0)
 
-    def set_show_gamut(self, checked: bool):
+    def set_show_gamut(self, checked: bool) -> None:
         self.show_gamut = checked
         self.update()
 
-    def set_show_spectral_locus(self, checked: bool):
+    def set_show_spectral_locus(self, checked: bool) -> None:
         self.show_spectral_locus = checked
         self.update()

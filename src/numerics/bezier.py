@@ -1,6 +1,9 @@
+from typing import List, Tuple
+
+
 def de_casteljau(
-    control_points: list[tuple[float, float]], t: float
-) -> tuple[float, float]:
+    control_points: List[Tuple[float, float]], t: float
+) -> Tuple[float, float]:
     points = control_points.copy()
     n = len(points)
     if n == 0:
@@ -15,8 +18,8 @@ def de_casteljau(
 
 
 def eval_bezier_curve(
-    control_points: list[tuple[float, float]], samples: int
-) -> list[tuple[float, float]]:
+    control_points: List[Tuple[float, float]], samples: int
+) -> List[Tuple[float, float]]:
     if samples < 2:
         raise ValueError("Samples must be at least 2")
     return [de_casteljau(control_points, t / (samples - 1)) for t in range(samples)]
