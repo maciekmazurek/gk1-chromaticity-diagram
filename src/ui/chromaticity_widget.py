@@ -1,11 +1,11 @@
-from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QPixmap, Qt
-from PySide6.QtWidgets import QLabel, QWidget
 from PySide6.QtCore import Signal
+from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QPixmap, Qt
+from PySide6.QtWidgets import QWidget
 
 from utils import get_path_from_resources, load_color_matching_funcs
 
 
-class ChromacityDiagramWidget(QWidget):
+class ChromaticityDiagramWidget(QWidget):
     colorChanged = Signal(tuple)
 
     def __init__(self, parent=None):
@@ -32,13 +32,13 @@ class ChromacityDiagramWidget(QWidget):
         self.coord_origin_y = int(coord_origin_y_original * scale_factor)
         self.coord_scale = coord_scale_original * scale_factor
 
-        self.chromacity_point_XYZ = [0.0, 0.0, 0.0]
+        self.chromaticity_point_XYZ = [0.0, 0.0, 0.0]
 
         self.show_gamut = True
         self.show_spectral_locus = True
 
     def set_XYZ(self, XYZ: list[float]):
-        self.chromacity_point_XYZ = XYZ
+        self.chromaticity_point_XYZ = XYZ
         self.colorChanged.emit(self.calc_current_RGB_val())
         self.update()
 
@@ -52,7 +52,7 @@ class ChromacityDiagramWidget(QWidget):
                 self.draw_spectral_locus(painter)
             if self.show_gamut:
                 self.draw_sRGB_gamut(painter)
-            self.draw_chromacity_point(painter)
+            self.draw_chromaticity_point(painter)
         finally:
             painter.end()
 
@@ -62,11 +62,11 @@ class ChromacityDiagramWidget(QWidget):
         )
         painter.scale(1, -1)
 
-    def calc_chromacity_point_xyz_values(self) -> tuple[float, float, float]:
-        XYZ_sum = sum(self.chromacity_point_XYZ)
-        x = self.chromacity_point_XYZ[0] / XYZ_sum
-        y = self.chromacity_point_XYZ[1] / XYZ_sum
-        z = self.chromacity_point_XYZ[2] / XYZ_sum
+    def calc_chromaticity_point_xyz_values(self) -> tuple[float, float, float]:
+        XYZ_sum = sum(self.chromaticity_point_XYZ)
+        x = self.chromaticity_point_XYZ[0] / XYZ_sum
+        y = self.chromaticity_point_XYZ[1] / XYZ_sum
+        z = self.chromaticity_point_XYZ[2] / XYZ_sum
         return (x, y, z)
 
     def draw_circle(self, painter: QPainter, x: float, y: float, radius_px: int):
@@ -78,14 +78,18 @@ class ChromacityDiagramWidget(QWidget):
             diameter_px,
         )
 
-    def draw_chromacity_point(self, painter: QPainter):
-        x, y, _ = self.calc_chromacity_point_xyz_values()
+    def draw_chromaticity_point(self, painter: QPainter):
+        x, y, _ = self.calc_chromaticity_point_xyz_values()
         painter.setPen(QPen(QColor(0, 0, 0)))
         painter.setBrush(QBrush(QColor(0, 0, 0)))
         self.draw_circle(painter, x, y, 4)
-        self.draw_chromacity_point_text(painter, x, y, f"(x={round(x, 2)},y={round(y, 2)})")
+        self.draw_chromaticity_point_text(
+            painter, x, y, f"(x={round(x, 2)},y={round(y, 2)})"
+        )
 
-    def draw_chromacity_point_text(self, painter: QPainter, x: float, y: float, text: str):
+    def draw_chromaticity_point_text(
+        self, painter: QPainter, x: float, y: float, text: str
+    ):
         painter.save()
         # Odwracamy układ, aby napis nie był odwrócony do góry nogami
         painter.scale(1, -1)
@@ -179,7 +183,7 @@ class ChromacityDiagramWidget(QWidget):
             )
 
     def calc_current_RGB_val(self) -> tuple[int]:
-        x, y, _ = self.calc_chromacity_point_xyz_values()
+        x, y, _ = self.calc_chromaticity_point_xyz_values()
         X, Y, Z = self.xyY_to_XYZ(x, y, 1.0)
         r, g, b = self.XYZ_to_sRGB(X, Y, Z)
         return (r, g, b)

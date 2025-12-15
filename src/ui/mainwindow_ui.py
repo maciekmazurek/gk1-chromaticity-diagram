@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QHBoxLayout, QLabel,
     QMainWindow, QMenuBar, QSizePolicy, QSpacerItem,
     QStatusBar, QVBoxLayout, QWidget)
 
-from .chromacity_widget import ChromacityDiagramWidget
+from .chromaticity_widget import ChromaticityDiagramWidget
 from .spectral_widget import SpectralDistributionWidget
 
 class Ui_MainWindow(object):
@@ -85,13 +85,13 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_3.addWidget(self.spectralDistributionWidget)
 
-        self.chromacityDiagramWidget = ChromacityDiagramWidget(self.centralwidget)
-        self.chromacityDiagramWidget.setObjectName(u"chromacityDiagramWidget")
-        sizePolicy.setHeightForWidth(self.chromacityDiagramWidget.sizePolicy().hasHeightForWidth())
-        self.chromacityDiagramWidget.setSizePolicy(sizePolicy)
-        self.verticalLayout = QVBoxLayout(self.chromacityDiagramWidget)
+        self.chromaticityDiagramWidget = ChromaticityDiagramWidget(self.centralwidget)
+        self.chromaticityDiagramWidget.setObjectName(u"chromaticityDiagramWidget")
+        sizePolicy.setHeightForWidth(self.chromaticityDiagramWidget.sizePolicy().hasHeightForWidth())
+        self.chromaticityDiagramWidget.setSizePolicy(sizePolicy)
+        self.verticalLayout = QVBoxLayout(self.chromaticityDiagramWidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.colorWidget = QWidget(self.chromacityDiagramWidget)
+        self.colorWidget = QWidget(self.chromaticityDiagramWidget)
         self.colorWidget.setObjectName(u"colorWidget")
         self.horizontalLayout = QHBoxLayout(self.colorWidget)
         self.horizontalLayout.setSpacing(0)
@@ -115,7 +115,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addWidget(self.colorWidget)
 
-        self.gamutWidget = QWidget(self.chromacityDiagramWidget)
+        self.gamutWidget = QWidget(self.chromaticityDiagramWidget)
         self.gamutWidget.setObjectName(u"gamutWidget")
         self.horizontalLayout_2 = QHBoxLayout(self.gamutWidget)
         self.horizontalLayout_2.setSpacing(0)
@@ -134,7 +134,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addWidget(self.gamutWidget)
 
-        self.spectralLocusWidget = QWidget(self.chromacityDiagramWidget)
+        self.spectralLocusWidget = QWidget(self.chromaticityDiagramWidget)
         self.spectralLocusWidget.setObjectName(u"spectralLocusWidget")
         self.horizontalLayout_4 = QHBoxLayout(self.spectralLocusWidget)
         self.horizontalLayout_4.setSpacing(0)
@@ -158,7 +158,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.addItem(self.verticalSpacer)
 
 
-        self.horizontalLayout_3.addWidget(self.chromacityDiagramWidget)
+        self.horizontalLayout_3.addWidget(self.chromaticityDiagramWidget)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
@@ -175,7 +175,7 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"gk1-chromacity-diagram", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"gk1-chromaticity-diagram", None))
         self.XLabel.setText(QCoreApplication.translate("MainWindow", u"X:  ", None))
         self.YLabel.setText(QCoreApplication.translate("MainWindow", u"Y:  ", None))
         self.ZLabel.setText(QCoreApplication.translate("MainWindow", u"Z:  ", None))

@@ -13,13 +13,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def setup_slots(self):
         self.spectralDistributionWidget.XYZChanged.connect(
-            self.chromacityDiagramWidget.set_XYZ
+            self.chromaticityDiagramWidget.set_XYZ
         )
-        self.gamutCheckBox.toggled.connect(self.chromacityDiagramWidget.set_show_gamut)
+        self.gamutCheckBox.toggled.connect(self.chromaticityDiagramWidget.set_show_gamut)
         self.spectralLocusCheckBox.toggled.connect(
-            self.chromacityDiagramWidget.set_show_spectral_locus
+            self.chromaticityDiagramWidget.set_show_spectral_locus
         )
-        self.chromacityDiagramWidget.colorChanged.connect(self.update_color_label)
+        self.chromaticityDiagramWidget.colorChanged.connect(self.update_color_label)
         self.spectralDistributionWidget.XYZChanged.connect(self.update_XYZ_labels)
 
     def update_color_label(self, rgb: tuple[int]):

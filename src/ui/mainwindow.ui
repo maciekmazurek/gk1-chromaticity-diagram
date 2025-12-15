@@ -23,7 +23,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>gk1-chromacity-diagram</string>
+   <string>gk1-chromaticity-diagram</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -120,7 +120,7 @@
      </widget>
     </item>
     <item>
-     <widget class="ChromacityDiagramWidget" name="chromacityDiagramWidget" native="true">
+     <widget class="ChromaticityDiagramWidget" name="chromaticityDiagramWidget" native="true">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -302,15 +302,15 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ChromacityDiagramWidget</class>
-   <extends>QWidget</extends>
-   <header>chromacitydiagramwidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>SpectralDistributionWidget</class>
    <extends>QWidget</extends>
    <header>spectraldistributionwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ChromaticityDiagramWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">chromaticitydiagramwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
