@@ -3,6 +3,7 @@ from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QPixmap, Qt
 from PySide6.QtWidgets import QWidget
 
 from utils import get_path_from_resources, load_color_matching_funcs
+from color.space import xyY_to_XYZ, XYZ_to_sRGB
 
 
 class ChromaticityDiagramWidget(QWidget):
@@ -36,6 +37,8 @@ class ChromaticityDiagramWidget(QWidget):
 
         self.show_gamut = True
         self.show_spectral_locus = True
+
+        self.locus_points = self.calc_spectral_locus_points()
 
     def set_XYZ(self, XYZ: list[float]):
         self.chromaticity_point_XYZ = XYZ
@@ -82,10 +85,13 @@ class ChromaticityDiagramWidget(QWidget):
         x, y, _ = self.calc_chromaticity_point_xyz_values()
         painter.setPen(QPen(QColor(0, 0, 0)))
         painter.setBrush(QBrush(QColor(0, 0, 0)))
-        self.draw_circle(painter, x, y, 4)
-        self.draw_chromaticity_point_text(
-            painter, x, y, f"(x={round(x, 2)},y={round(y, 2)})"
-        )
+        try:
+            self.draw_circle(painter, x, y, 4)
+            self.draw_chromaticity_point_text(
+                painter, x, y, f"(x={round(x, 2)},y={round(y, 2)})"
+            )
+        except OverflowError:
+            pass
 
     def draw_chromaticity_point_text(
         self, painter: QPainter, x: float, y: float, text: str
@@ -104,8 +110,7 @@ class ChromaticityDiagramWidget(QWidget):
         painter.restore()
 
     def draw_spectral_locus(self, painter: QPainter):
-        locus_points = self.calc_spectral_locus_points()
-        for point in locus_points:
+        for point in self.locus_points:
             x = point[0]
             y = point[1]
             color = point[2]
@@ -127,37 +132,11 @@ class ChromaticityDiagramWidget(QWidget):
                 continue
             x = cmf_x_val / XYZ_sum
             y = cmf_y_val / XYZ_sum
-            X, Y, Z = self.xyY_to_XYZ(x, y, 1.0)
-            r, g, b = self.XYZ_to_sRGB(X, Y, Z)
+            X, Y, Z = xyY_to_XYZ(x, y, 1.0)
+            r, g, b = XYZ_to_sRGB(X, Y, Z)
             locus_points.append((x, y, QColor(r, g, b)))
 
         return locus_points
-
-    def xyY_to_XYZ(self, x: float, y: float, Y: float) -> tuple[float, float, float]:
-        if y <= 0:
-            return (0.0, 0.0, 0.0)
-        X = x * Y / y
-        Z = (1.0 - x - y) * Y / y
-        return (X, Y, Z)
-
-    def XYZ_to_sRGB(self, X: float, Y: float, Z: float) -> tuple[int, int, int]:
-        # macierz XYZ -> linear sRGB (D65)
-        r_linear = 3.2406 * X - 1.5372 * Y - 0.4986 * Z
-        g_linear = -0.9689 * X + 1.8758 * Y + 0.0415 * Z
-        b_linear = 0.0557 * X - 0.2040 * Y + 1.0570 * Z
-
-        def sRGB_gamma_correct(color_val: float) -> float:
-            if color_val <= 0:
-                return 0.0
-            if color_val <= 0.0031308:
-                return 12.92 * color_val
-            return 1.055 * (color_val ** (1.0 / 2.4)) - 0.055
-
-        r = max(0.0, min(1.0, sRGB_gamma_correct(r_linear)))
-        g = max(0.0, min(1.0, sRGB_gamma_correct(g_linear)))
-        b = max(0.0, min(1.0, sRGB_gamma_correct(b_linear)))
-
-        return (int(round(r * 255)), int(round(g * 255)), int(round(b * 255)))
 
     def draw_sRGB_gamut(self, painter: QPainter):
         # Współrzędne 3 barw podstawowych na diagramie chromatyczności
@@ -184,8 +163,8 @@ class ChromaticityDiagramWidget(QWidget):
 
     def calc_current_RGB_val(self) -> tuple[int]:
         x, y, _ = self.calc_chromaticity_point_xyz_values()
-        X, Y, Z = self.xyY_to_XYZ(x, y, 1.0)
-        r, g, b = self.XYZ_to_sRGB(X, Y, Z)
+        X, Y, Z = xyY_to_XYZ(x, y, 1.0)
+        r, g, b = XYZ_to_sRGB(X, Y, Z)
         return (r, g, b)
 
     def set_show_gamut(self, checked: bool):

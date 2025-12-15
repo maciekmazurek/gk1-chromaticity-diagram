@@ -165,7 +165,7 @@ class SpectralDistributionWidget(QWidget):
     def control_point_hit_test(self, mouse_pos: QPointF) -> int | None:
         """Sprawdza czy kursor myszy wchodzi w interakcję z punktem kontrolnym.
         Jeżeli tak zwraca jego indeks, jeżeli nie zwraca None"""
-        index = None
+        candidates: list[int] = []
         widget_control_points = [
             self.scale_norm_to_widget(cp) for cp in self.bezier_control_points
         ]
@@ -174,9 +174,18 @@ class SpectralDistributionWidget(QWidget):
                 abs(cp.x() - mouse_pos.x()) <= self._hit_radius_px
                 and abs(cp.y() - mouse_pos.y()) <= self._hit_radius_px
             ):
-                index = i
-                break
-        return index
+                candidates.append(i)
+
+        if not candidates:
+            return None
+
+        # Priorytet: najpierw punkty wewnętrzne (niekońcowe), a przy remisie
+        # wybieramy ten o większym indeksie (zwykle "nowszy" punkt).
+        n = len(self.bezier_control_points)
+        inner = [i for i in candidates if i not in (0, n - 1)]
+        if inner:
+            return max(inner)
+        return max(candidates)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
