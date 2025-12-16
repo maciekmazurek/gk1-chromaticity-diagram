@@ -10,7 +10,7 @@ Interactive PySide6 application for color science visualization, made for the un
 
 - Displaying chromaticity on a CIE diagram with spectral locus and sRGB gamut overlays
 
-![Demo](docs/assets/Animation.apng)
+![Demo](docs/assets/demo.apng)
 
 ## Quickstart
 
