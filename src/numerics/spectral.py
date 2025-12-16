@@ -14,6 +14,23 @@ def scale_norm_to_spectral(
     wavelengths: np.ndarray,
     cmfs_values: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
+    """Map normalized curve coordinates to the spectral domain.
+
+    Parameters
+    ----------
+    norm_x, norm_y : np.ndarray
+        Normalized Bézier coordinates in [0,1].
+    wavelengths : np.ndarray
+        Wavelength support (nm); defines X scaling to [min(λ), max(λ)].
+    cmfs_values : np.ndarray
+        CMF values; their min/max define Y scaling for S(λ).
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        Tuple (λ, S) where X maps to wavelengths and Y maps to an amplitude
+        range derived from CMFs to keep integration numerically stable.
+    """
     x = norm_x.copy()
     x *= wavelengths.max() - wavelengths.min()
     x += wavelengths.min()
@@ -26,6 +43,11 @@ def scale_norm_to_spectral(
 
 
 def calc_cmfs(wavelengths: np.ndarray, cmfs_values: np.ndarray) -> List[interp1d]:
+    """Create cubic interpolants for X̄(λ), Ȳ(λ), Z̄(λ).
+
+    Each CMF is represented with a cubic ``interp1d`` over the wavelength
+    domain, returning 0 outside support to ensure robust integration.
+    """
     cmfs: List[interp1d] = []
     x = wavelengths
     for i in range(3):
@@ -40,6 +62,12 @@ def calc_spectrum_function(
     cmfs_values: np.ndarray,
     samples: int = 100,
 ) -> interp1d:
+    """Build S(λ) from Bézier control points.
+
+    The Bézier curve is sampled uniformly in normalized space and mapped to
+    the spectral domain via ``scale_norm_to_spectral``. Returns a cubic
+    interpolant so S(λ) can be evaluated at arbitrary wavelengths.
+    """
     curve_points = eval_bezier_curve(control_points, samples)
     nx = np.array([p[0] for p in curve_points], dtype=float)
     ny = np.array([p[1] for p in curve_points], dtype=float)
@@ -49,8 +77,13 @@ def calc_spectrum_function(
 
 
 def integrate_XYZ(S_func: interp1d, cmfs: Sequence[interp1d]) -> List[float]:
+    """Integrate XYZ = ∫ CMF(λ) · S(λ) dλ using cubic splines.
+
+    The pointwise product is spline-fit on the nodes of S(λ) and integrated
+    exactly over the domain, yielding three floats [X, Y, Z].
+    """
     x = S_func.x
-    XYZ: list[float] = []
+    XYZ: List[float] = []
     Sx = S_func(x)
     for cmf in cmfs:
         y_prod = cmf(x) * Sx

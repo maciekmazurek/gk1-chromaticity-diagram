@@ -132,6 +132,12 @@ class ChromaticityDiagramWidget(QWidget):
             self.draw_circle(painter, x, y, 2)
 
     def calc_spectral_locus_points(self) -> List[Tuple[float, float, QColor]]:
+        """Compute spectral locus points colored by sRGB.
+
+        Converts CMFs to chromaticity (x,y), trims wavelengths to match the
+        background image extent, and maps each (x,y) to an sRGB color via
+        XYZ to sRGB conversion for display.
+        """
         wavelenghts, cmfs_values = load_color_matching_funcs()
         locus_points = []
 
