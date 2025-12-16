@@ -20,10 +20,10 @@ class SpectralDistributionWidget(QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.bezier_control_points: List[Tuple[float, float]] = [
-            (0.2, 0.0),
-            (0.4, 0.4),
-            (0.7, 0.4),
-            (0.9, 0.0),
+            (0.084, 0.0),
+            (0.18, 0.5),
+            (0.33, 0.12),
+            (0.93, 0.0),
         ]
         self.margin: int = 50
 
@@ -147,8 +147,8 @@ class SpectralDistributionWidget(QWidget):
         painter.drawPath(path)
 
         # Drawing control points
-        painter.setBrush(QColor(255, 200, 255))
-        painter.setPen(QPen(QColor(255, 200, 255), 2))
+        painter.setBrush(QColor(237, 105, 240))
+        painter.setPen(QPen(QColor(237, 105, 240), 2))
         for p in self.bezier_control_points:
             painter.drawEllipse(self.scale_norm_to_widget(p), 3, 3)
 
